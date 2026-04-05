@@ -53,6 +53,27 @@ fn get_battery_percent() -> i8 {
     100 // Fallback für Desktop-PCs
 }
 
+// Liest die Lautstärke und den Mute-Status über WirePlumber aus
+fn get_audio_state() -> (i8, bool) {
+    if let Ok(output) = std::process::Command::new("wpctl")
+        .args(&["get-volume", "@DEFAULT_AUDIO_SINK@"])
+        .output()
+    {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut volume: i8 = 0;
+        let muted = stdout.contains("[MUTED]");
+
+        // Wir zerlegen den String, um an die Zahl (z.B. "0.45") zu kommen
+        if let Some(vol_str) = stdout.split_whitespace().nth(1) {
+            if let Ok(vol_float) = vol_str.parse::<f32>() {
+                volume = (vol_float * 100.0).round() as i8;
+            }
+        }
+        return (volume, muted);
+    }
+    (0, true) // Fallback, falls wpctl fehlschlägt
+}
+
 // OPTIMIERUNG 1: Keine Panics mehr! Gibt einfach eine leere Liste zurück, wenn Niri fehlt.
 async fn fetch_workspaces() -> Vec<NiriWorkspace> {
     let output = match Command::new("niri").args(&["msg", "-j", "workspaces"]).output().await {
@@ -113,7 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(stdout) = event_stream.stdout.take() {
                 let mut reader = BufReader::new(stdout).lines();
                 // Timer, der jede Minute triggert
-                let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
 
                 if !send_state_to_quickshell(&mut tx).await { return; }
 
@@ -153,6 +174,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 .args(&["msg", "action", "focus-workspace", &ws_id.to_string()])
                                 .output()
                                 .await;
+                        } else if action == "launch_menu" { // <--- NEU
+                            println!("🚀 UI Befehl empfangen: Öffne App-Launcher");
+                            
+                            // Wir nutzen Niri's "spawn" Befehl, damit das neue Fenster 
+                            // garantiert den korrekten Fokus auf Wayland bekommt!
+                            // Ändere "fuzzel" hier zu "wofi" oder "rofi", je nachdem, was du installiert hast.
+                            let _ = Command::new("niri")
+                                .args(&["msg", "action", "spawn", "--", "fuzzel"])
+                                .output()
+                                .await;
                         }
                     }
                 }
@@ -185,10 +216,14 @@ async fn send_state_to_quickshell(tx: &mut tokio::io::WriteHalf<tokio::net::Unix
     let active_title = fetch_active_window_title().await;
     let title_fb = active_title.as_ref().map(|t| builder.create_string(t));
 
+    let (vol, muted) = get_audio_state();
+
     let shell_state = ShellState::create(&mut builder, &ShellStateArgs {
         workspaces: Some(workspaces_vec),
         battery_percent: get_battery_percent(),
         active_window_title: title_fb,
+        audio_volume: vol,
+        audio_muted: muted,
     });
 
     // NUR EINMAL ABSCHLIESSEN (mit Size Prefix!)

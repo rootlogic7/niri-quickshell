@@ -36,6 +36,34 @@ PanelWindow {
             }
             spacing: 8
 
+            Rectangle {
+                width: 36
+                height: 28
+                radius: 6
+                // Hover-Effekt: Wird beim Überfahren blau
+                color: menuMouseArea.containsMouse ? "#89b4fa" : "#313244"
+
+                Text {
+                    anchors.centerIn: parent
+                    //  ist das NixOS-Logo in Nerd Fonts. 
+                    // Falls du ein Kästchen siehst, ändere es vorerst in "❄️"
+                    text: "" 
+                    font.pixelSize: 16
+                    color: menuMouseArea.containsMouse ? "#1e1e2e" : "#89b4fa"
+                }
+
+                MouseArea {
+                    id: menuMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true // Aktiviert den Hover-Effekt
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        //console.log("Hauptmenü geklickt!")
+                        niriReader.launchMenu()
+                    }
+                }
+            }
+
             Repeater {
                 model: niriReader.workspaces
 
@@ -87,6 +115,16 @@ PanelWindow {
                 verticalCenter: parent.verticalCenter
             }
             spacing: 16
+
+            // --- NEU: Audio ---
+            Text {
+                // Zeigt 🔇 wenn stummgeschaltet, sonst 🔊
+                text: (niriReader.audioMuted ? "🔇 " : "🔊 ") + niriReader.audioVolume + "%"
+                // Rot bei Stummschaltung, Blau im Normalbetrieb
+                color: niriReader.audioMuted ? "#f38ba8" : "#89b4fa"
+                font.pixelSize: 14
+                font.bold: true
+            }
 
             Text {
                 text: "🔋 " + niriReader.batteryPercent + "%"

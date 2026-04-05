@@ -25,6 +25,8 @@ SocketReader::SocketReader(QObject *parent) : QObject(parent), m_socket(new QLoc
 QVariantList SocketReader::workspaces() const { return m_workspaces; }
 QString SocketReader::activeWindowTitle() const { return m_activeWindowTitle; }
 int SocketReader::batteryPercent() const { return m_batteryPercent; }
+int SocketReader::audioVolume() const { return m_audioVolume; }
+bool SocketReader::audioMuted() const { return m_audioMuted; }
 
 void SocketReader::tryConnect() {
     if (m_socket->state() == QLocalSocket::UnconnectedState) {
@@ -111,6 +113,19 @@ void SocketReader::onReadyRead() {
             m_batteryPercent = newBat;
             emit batteryPercentChanged();
         }
+
+        // --- Audio verarbeiten ---
+        int newVol = shellState->audio_volume();
+        if (m_audioVolume != newVol) {
+            m_audioVolume = newVol;
+            emit audioVolumeChanged();
+        }
+
+        bool newMuted = shellState->audio_muted();
+        if (m_audioMuted != newMuted) {
+            m_audioMuted = newMuted;
+            emit audioMutedChanged();
+        }
     }
 }
 
@@ -119,6 +134,16 @@ void SocketReader::focusWorkspace(int id) {
     auto action = builder.CreateString("focus_workspace");
     auto cmd = NiriShell::CreateClientCommand(builder, action, id);
     builder.Finish(cmd); // Commands ans Backend bleiben einfach (kein Prefix nötig)
+    m_socket->write(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+    m_socket->flush();
+}
+
+void SocketReader::launchMenu() {
+    flatbuffers::FlatBufferBuilder builder;
+    // Die Aktion heißt jetzt "launch_menu", der Integer-Wert (0) ist ein Dummy, da wir ihn nicht brauchen
+    auto action = builder.CreateString("launch_menu");
+    auto cmd = NiriShell::CreateClientCommand(builder, action, 0); 
+    builder.Finish(cmd);
     m_socket->write(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
     m_socket->flush();
 }

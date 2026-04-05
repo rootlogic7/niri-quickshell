@@ -156,6 +156,8 @@ impl<'a> ShellState<'a> {
   pub const VT_WORKSPACES: ::flatbuffers::VOffsetT = 4;
   pub const VT_BATTERY_PERCENT: ::flatbuffers::VOffsetT = 6;
   pub const VT_ACTIVE_WINDOW_TITLE: ::flatbuffers::VOffsetT = 8;
+  pub const VT_AUDIO_VOLUME: ::flatbuffers::VOffsetT = 10;
+  pub const VT_AUDIO_MUTED: ::flatbuffers::VOffsetT = 12;
 
   #[inline]
   pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -169,6 +171,8 @@ impl<'a> ShellState<'a> {
     let mut builder = ShellStateBuilder::new(_fbb);
     if let Some(x) = args.active_window_title { builder.add_active_window_title(x); }
     if let Some(x) = args.workspaces { builder.add_workspaces(x); }
+    builder.add_audio_muted(args.audio_muted);
+    builder.add_audio_volume(args.audio_volume);
     builder.add_battery_percent(args.battery_percent);
     builder.finish()
   }
@@ -195,6 +199,20 @@ impl<'a> ShellState<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(ShellState::VT_ACTIVE_WINDOW_TITLE, None)}
   }
+  #[inline]
+  pub fn audio_volume(&self) -> i8 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i8>(ShellState::VT_AUDIO_VOLUME, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn audio_muted(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(ShellState::VT_AUDIO_MUTED, Some(false)).unwrap()}
+  }
 }
 
 impl ::flatbuffers::Verifiable for ShellState<'_> {
@@ -206,6 +224,8 @@ impl ::flatbuffers::Verifiable for ShellState<'_> {
      .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<Workspace>>>>("workspaces", Self::VT_WORKSPACES, false)?
      .visit_field::<i8>("battery_percent", Self::VT_BATTERY_PERCENT, false)?
      .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("active_window_title", Self::VT_ACTIVE_WINDOW_TITLE, false)?
+     .visit_field::<i8>("audio_volume", Self::VT_AUDIO_VOLUME, false)?
+     .visit_field::<bool>("audio_muted", Self::VT_AUDIO_MUTED, false)?
      .finish();
     Ok(())
   }
@@ -214,6 +234,8 @@ pub struct ShellStateArgs<'a> {
     pub workspaces: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<Workspace<'a>>>>>,
     pub battery_percent: i8,
     pub active_window_title: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub audio_volume: i8,
+    pub audio_muted: bool,
 }
 impl<'a> Default for ShellStateArgs<'a> {
   #[inline]
@@ -222,6 +244,8 @@ impl<'a> Default for ShellStateArgs<'a> {
       workspaces: None,
       battery_percent: 0,
       active_window_title: None,
+      audio_volume: 0,
+      audio_muted: false,
     }
   }
 }
@@ -244,6 +268,14 @@ impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ShellStateBuilder<'a, 'b, A> 
     self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(ShellState::VT_ACTIVE_WINDOW_TITLE, active_window_title);
   }
   #[inline]
+  pub fn add_audio_volume(&mut self, audio_volume: i8) {
+    self.fbb_.push_slot::<i8>(ShellState::VT_AUDIO_VOLUME, audio_volume, 0);
+  }
+  #[inline]
+  pub fn add_audio_muted(&mut self, audio_muted: bool) {
+    self.fbb_.push_slot::<bool>(ShellState::VT_AUDIO_MUTED, audio_muted, false);
+  }
+  #[inline]
   pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ShellStateBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     ShellStateBuilder {
@@ -264,6 +296,8 @@ impl ::core::fmt::Debug for ShellState<'_> {
       ds.field("workspaces", &self.workspaces());
       ds.field("battery_percent", &self.battery_percent());
       ds.field("active_window_title", &self.active_window_title());
+      ds.field("audio_volume", &self.audio_volume());
+      ds.field("audio_muted", &self.audio_muted());
       ds.finish()
   }
 }

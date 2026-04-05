@@ -12,6 +12,8 @@ table ShellState {
   workspaces: [Workspace];
   battery_percent: int8;
   active_window_title: string;
+  audio_volume: int8;
+  audio_muted: bool;
 }
 
 root_type ShellState;

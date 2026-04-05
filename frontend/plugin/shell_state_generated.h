@@ -102,7 +102,9 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_WORKSPACES = 4,
     VT_BATTERY_PERCENT = 6,
-    VT_ACTIVE_WINDOW_TITLE = 8
+    VT_ACTIVE_WINDOW_TITLE = 8,
+    VT_AUDIO_VOLUME = 10,
+    VT_AUDIO_MUTED = 12
   };
   const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *>(VT_WORKSPACES);
@@ -113,6 +115,12 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::String *active_window_title() const {
     return GetPointer<const ::flatbuffers::String *>(VT_ACTIVE_WINDOW_TITLE);
   }
+  int8_t audio_volume() const {
+    return GetField<int8_t>(VT_AUDIO_VOLUME, 0);
+  }
+  bool audio_muted() const {
+    return GetField<uint8_t>(VT_AUDIO_MUTED, 0) != 0;
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -122,6 +130,8 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<int8_t>(verifier, VT_BATTERY_PERCENT, 1) &&
            VerifyOffset(verifier, VT_ACTIVE_WINDOW_TITLE) &&
            verifier.VerifyString(active_window_title()) &&
+           VerifyField<int8_t>(verifier, VT_AUDIO_VOLUME, 1) &&
+           VerifyField<uint8_t>(verifier, VT_AUDIO_MUTED, 1) &&
            verifier.EndTable();
   }
 };
@@ -139,6 +149,12 @@ struct ShellStateBuilder {
   void add_active_window_title(::flatbuffers::Offset<::flatbuffers::String> active_window_title) {
     fbb_.AddOffset(ShellState::VT_ACTIVE_WINDOW_TITLE, active_window_title);
   }
+  void add_audio_volume(int8_t audio_volume) {
+    fbb_.AddElement<int8_t>(ShellState::VT_AUDIO_VOLUME, audio_volume, 0);
+  }
+  void add_audio_muted(bool audio_muted) {
+    fbb_.AddElement<uint8_t>(ShellState::VT_AUDIO_MUTED, static_cast<uint8_t>(audio_muted), 0);
+  }
   explicit ShellStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -154,10 +170,14 @@ inline ::flatbuffers::Offset<ShellState> CreateShellState(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>>> workspaces = 0,
     int8_t battery_percent = 0,
-    ::flatbuffers::Offset<::flatbuffers::String> active_window_title = 0) {
+    ::flatbuffers::Offset<::flatbuffers::String> active_window_title = 0,
+    int8_t audio_volume = 0,
+    bool audio_muted = false) {
   ShellStateBuilder builder_(_fbb);
   builder_.add_active_window_title(active_window_title);
   builder_.add_workspaces(workspaces);
+  builder_.add_audio_muted(audio_muted);
+  builder_.add_audio_volume(audio_volume);
   builder_.add_battery_percent(battery_percent);
   return builder_.Finish();
 }
@@ -166,14 +186,18 @@ inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     const std::vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces = nullptr,
     int8_t battery_percent = 0,
-    const char *active_window_title = nullptr) {
+    const char *active_window_title = nullptr,
+    int8_t audio_volume = 0,
+    bool audio_muted = false) {
   auto workspaces__ = workspaces ? _fbb.CreateVector<::flatbuffers::Offset<NiriShell::Workspace>>(*workspaces) : 0;
   auto active_window_title__ = active_window_title ? _fbb.CreateString(active_window_title) : 0;
   return NiriShell::CreateShellState(
       _fbb,
       workspaces__,
       battery_percent,
-      active_window_title__);
+      active_window_title__,
+      audio_volume,
+      audio_muted);
 }
 
 inline const NiriShell::ShellState *GetShellState(const void *buf) {
