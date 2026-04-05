@@ -1,0 +1,17 @@
+# Nix
+result
+
+# Rust Backend
+backend/target/
+**/*.rs.bk
+
+# C++ Frontend / Quickshell
+frontend/build/
+frontend/.qt/
+frontend/CMakeLists.txt.user
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

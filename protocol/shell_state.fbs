@@ -1,0 +1,23 @@
+// protocol/shell_state.fbs
+
+namespace NiriShell;
+
+// Definiert einen einzelnen Workspace in Niri
+table Workspace {
+  id: uint64;           // Die interne ID des Workspaces
+  name: string;         // Der Anzeigename (z.B. "1", "Browser", "Code")
+  is_active: bool;      // Ist das der aktuell fokussierte Workspace?
+}
+
+// Das Hauptobjekt, das jeden Zustand deiner Shell repräsentiert.
+// Das ist das Paket, das Rust an C++ schickt.
+table ShellState {
+  workspaces: [Workspace]; // Eine Liste aller aktuellen Workspaces
+  
+  // Platzhalter für die Zukunft:
+  // battery_percent: int8;
+  // volume_percent: int8;
+}
+
+// Sagt dem Compiler, dass 'ShellState' das Hauptpaket ist
+root_type ShellState;
