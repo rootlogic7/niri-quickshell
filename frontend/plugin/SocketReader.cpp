@@ -1,9 +1,9 @@
 // frontend/plugin/SocketReader.cpp
 #include "SocketReader.h"
-#include "shell_state_generated.h" // Unser generierter Vertrag
+#include "shell_state_generated.h"
 #include <QDebug>
 #include <QVariantMap>
-
+#include "client_command_generated.h"
 using namespace NiriShell; // Aus dem .fbs Schema
 
 SocketReader::SocketReader(QObject *parent) : QObject(parent), m_socket(new QLocalSocket(this)) {
@@ -62,4 +62,22 @@ void SocketReader::onReadyRead() {
         m_workspaces = newWorkspaces;
         emit workspacesChanged();
     }
+}
+
+void SocketReader::focusWorkspace(int id) {
+    // 1. FlatBuffer Builder initialisieren
+    flatbuffers::FlatBufferBuilder builder;
+
+    // 2. String für die Aktion erstellen
+    auto action = builder.CreateString("focus_workspace");
+
+    // 3. Das Command-Objekt zusammenbauen
+    auto cmd = NiriShell::CreateClientCommand(builder, action, id);
+    builder.Finish(cmd);
+
+    // 4. Den puren Speicherblock über den Unix Socket an Rust schicken!
+    m_socket->write(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+    m_socket->flush();
+    
+    qDebug() << "Befehl an Rust gesendet: focus_workspace" << id;
 }

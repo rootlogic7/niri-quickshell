@@ -42,6 +42,15 @@ PanelWindow {
                     font.bold: modelData.is_active
                     color: modelData.is_active ? "#1e1e2e" : "#cdd6f4"
                 }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        // Hier rufen wir unsere C++ Funktion auf!
+                        niriReader.focusWorkspace(modelData.id)
+                    }
+                }
             }
         }
     }

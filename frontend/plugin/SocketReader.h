@@ -15,6 +15,7 @@ class SocketReader : public QObject {
 public:
     explicit SocketReader(QObject *parent = nullptr);
     QVariantList workspaces() const;
+    Q_INVOKABLE void focusWorkspace(int id);
 
 signals:
     void workspacesChanged();

@@ -1,0 +1,10 @@
+// protocol/client_command.fbs
+namespace NiriShell;
+
+// Ein simples, erweiterbares Kommando-Objekt vom UI ans Backend
+table ClientCommand {
+  action: string;      // z.B. "focus_workspace"
+  arg_int: int32;      // Die ID des Workspaces
+}
+
+root_type ClientCommand;
