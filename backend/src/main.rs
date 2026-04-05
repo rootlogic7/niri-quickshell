@@ -21,12 +21,15 @@ struct NiriWorkspace {
     is_active: bool,
 }
 
+// OPTIMIERUNG 1: Keine Panics mehr! Gibt einfach eine leere Liste zurück, wenn Niri fehlt.
 async fn fetch_workspaces() -> Vec<NiriWorkspace> {
-    let output = Command::new("niri")
-        .args(&["msg", "-j", "workspaces"])
-        .output()
-        .await
-        .expect("Fehler beim Aufruf von niri msg");
+    let output = match Command::new("niri").args(&["msg", "-j", "workspaces"]).output().await {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("⚠️ Konnte Niri nicht erreichen: {}", e);
+            return vec![];
+        }
+    };
 
     let raw_json = String::from_utf8_lossy(&output.stdout);
 
@@ -49,37 +52,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Rust Backend bereit! Warte auf Quickshell...");
 
     loop {
-        let (stream, _) = listener.accept().await?;
+        // OPTIMIERUNG 2: Kein Absturz bei Verbindungsfehlern
+        let stream = match listener.accept().await {
+            Ok((s, _)) => s,
+            Err(e) => {
+                eprintln!("⚠️ Warnung: Fehler bei eingehender Socket-Verbindung: {}", e);
+                continue; // Schleife läuft einfach weiter!
+            }
+        };
+        
         println!("✅ Quickshell verbunden! Klinke in Niri-Events ein...");
-
-        // Wir spalten den Socket auf in Lesen (rx) und Schreiben (tx)
         let (mut rx, mut tx) = tokio::io::split(stream);
 
-        // TASK 1: Lauscht auf Niri-Events und schreibt an C++ (Nutzt `tx`)
+        // TASK 1: Niri-Events zu C++
         tokio::spawn(async move {
-            let mut event_stream = Command::new("niri")
+            let mut event_stream = match Command::new("niri")
                 .args(&["msg", "-j", "event-stream"])
                 .stdout(Stdio::piped())
-                .spawn()
-                .expect("Konnte niri event-stream nicht starten");
+                .spawn() 
+            {
+                Ok(child) => child,
+                Err(e) => {
+                    eprintln!("⚠️ Konnte niri event-stream nicht starten: {}", e);
+                    return;
+                }
+            };
 
-            let stdout = event_stream.stdout.take().unwrap();
-            let mut reader = BufReader::new(stdout).lines();
+            if let Some(stdout) = event_stream.stdout.take() {
+                let mut reader = BufReader::new(stdout).lines();
 
-            // Erster Push
-            if !send_state_to_quickshell(&mut tx).await {
-                return;
-            }
+                if !send_state_to_quickshell(&mut tx).await { return; }
 
-            // Schleife
-            while let Ok(Some(_line)) = reader.next_line().await {
-                if !send_state_to_quickshell(&mut tx).await {
-                    break; 
+                while let Ok(Some(_line)) = reader.next_line().await {
+                    if !send_state_to_quickshell(&mut tx).await { break; }
                 }
             }
         });
 
-        // TASK 2: Lauscht auf Befehle von C++ und steuert Niri (Nutzt `rx`)
+        // TASK 2: C++ Kommandos zu Niri
         tokio::spawn(async move {
             let mut buf = vec![0u8; 1024]; 
             
@@ -90,11 +100,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(action) = cmd.action() {
                         if action == "focus_workspace" {
                             let ws_id = cmd.arg_int();
-                            println!("🎯 UI Befehl empfangen: Wechsle zu Workspace {}", ws_id);
                             
+                            // OPTIMIERUNG 3: output().await verhindert Zombie-Prozesse
                             let _ = Command::new("niri")
                                 .args(&["msg", "action", "focus-workspace", &ws_id.to_string()])
-                                .spawn();
+                                .output()
+                                .await;
                         }
                     }
                 }
@@ -103,7 +114,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-// Wir übergeben hier 'tx' statt 'stream'
 async fn send_state_to_quickshell(tx: &mut tokio::io::WriteHalf<tokio::net::UnixStream>) -> bool {
     let mut workspaces_data = fetch_workspaces().await;
     workspaces_data.sort_by_key(|ws| ws.idx);
@@ -132,7 +142,6 @@ async fn send_state_to_quickshell(tx: &mut tokio::io::WriteHalf<tokio::net::Unix
     builder.finish(shell_state, None);
     let data = builder.finished_data();
 
-    // HIER NUTZEN WIR NUN tx statt stream
     if let Err(e) = tx.write_all(data).await {
         eprintln!("❌ Verbindung zu Quickshell abgebrochen: {}", e);
         return false;
