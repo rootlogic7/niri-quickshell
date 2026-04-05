@@ -22,6 +22,26 @@ struct NiriWorkspace {
     is_active: bool,
 }
 
+#[derive(Deserialize, Debug)]
+struct NiriWindow {
+    title: Option<String>,
+    is_focused: bool,
+}
+
+// Sucht das aktive Fenster und gibt dessen Titel zurück
+async fn fetch_active_window_title() -> Option<String> {
+    let output = Command::new("niri").args(&["msg", "-j", "windows"]).output().await.ok()?;
+    
+    if let Ok(windows) = serde_json::from_slice::<Vec<NiriWindow>>(&output.stdout) {
+        for w in windows {
+            if w.is_focused {
+                return w.title; // Gibt den Titel zurück, falls vorhanden
+            }
+        }
+    }
+    None
+}
+
 // Liest den Akku direkt aus dem Linux-Kernel aus (0 % CPU overhead)
 fn get_battery_percent() -> i8 {
     if let Ok(bat) = fs::read_to_string("/sys/class/power_supply/BAT0/capacity") {
@@ -162,9 +182,13 @@ async fn send_state_to_quickshell(tx: &mut tokio::io::WriteHalf<tokio::net::Unix
 
     let workspaces_vec = builder.create_vector(&ws_offsets);
 
+    let active_title = fetch_active_window_title().await;
+    let title_fb = active_title.as_ref().map(|t| builder.create_string(t));
+
     let shell_state = ShellState::create(&mut builder, &ShellStateArgs {
         workspaces: Some(workspaces_vec),
         battery_percent: get_battery_percent(),
+        active_window_title: title_fb,
     });
 
     // NUR EINMAL ABSCHLIESSEN (mit Size Prefix!)

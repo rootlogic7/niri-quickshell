@@ -155,6 +155,7 @@ impl<'a> ::flatbuffers::Follow<'a> for ShellState<'a> {
 impl<'a> ShellState<'a> {
   pub const VT_WORKSPACES: ::flatbuffers::VOffsetT = 4;
   pub const VT_BATTERY_PERCENT: ::flatbuffers::VOffsetT = 6;
+  pub const VT_ACTIVE_WINDOW_TITLE: ::flatbuffers::VOffsetT = 8;
 
   #[inline]
   pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -166,6 +167,7 @@ impl<'a> ShellState<'a> {
     args: &'args ShellStateArgs<'args>
   ) -> ::flatbuffers::WIPOffset<ShellState<'bldr>> {
     let mut builder = ShellStateBuilder::new(_fbb);
+    if let Some(x) = args.active_window_title { builder.add_active_window_title(x); }
     if let Some(x) = args.workspaces { builder.add_workspaces(x); }
     builder.add_battery_percent(args.battery_percent);
     builder.finish()
@@ -186,6 +188,13 @@ impl<'a> ShellState<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<i8>(ShellState::VT_BATTERY_PERCENT, Some(0)).unwrap()}
   }
+  #[inline]
+  pub fn active_window_title(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(ShellState::VT_ACTIVE_WINDOW_TITLE, None)}
+  }
 }
 
 impl ::flatbuffers::Verifiable for ShellState<'_> {
@@ -196,6 +205,7 @@ impl ::flatbuffers::Verifiable for ShellState<'_> {
     v.visit_table(pos)?
      .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<Workspace>>>>("workspaces", Self::VT_WORKSPACES, false)?
      .visit_field::<i8>("battery_percent", Self::VT_BATTERY_PERCENT, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("active_window_title", Self::VT_ACTIVE_WINDOW_TITLE, false)?
      .finish();
     Ok(())
   }
@@ -203,6 +213,7 @@ impl ::flatbuffers::Verifiable for ShellState<'_> {
 pub struct ShellStateArgs<'a> {
     pub workspaces: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<Workspace<'a>>>>>,
     pub battery_percent: i8,
+    pub active_window_title: Option<::flatbuffers::WIPOffset<&'a str>>,
 }
 impl<'a> Default for ShellStateArgs<'a> {
   #[inline]
@@ -210,6 +221,7 @@ impl<'a> Default for ShellStateArgs<'a> {
     ShellStateArgs {
       workspaces: None,
       battery_percent: 0,
+      active_window_title: None,
     }
   }
 }
@@ -226,6 +238,10 @@ impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ShellStateBuilder<'a, 'b, A> 
   #[inline]
   pub fn add_battery_percent(&mut self, battery_percent: i8) {
     self.fbb_.push_slot::<i8>(ShellState::VT_BATTERY_PERCENT, battery_percent, 0);
+  }
+  #[inline]
+  pub fn add_active_window_title(&mut self, active_window_title: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(ShellState::VT_ACTIVE_WINDOW_TITLE, active_window_title);
   }
   #[inline]
   pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ShellStateBuilder<'a, 'b, A> {
@@ -247,6 +263,7 @@ impl ::core::fmt::Debug for ShellState<'_> {
     let mut ds = f.debug_struct("ShellState");
       ds.field("workspaces", &self.workspaces());
       ds.field("battery_percent", &self.battery_percent());
+      ds.field("active_window_title", &self.active_window_title());
       ds.finish()
   }
 }

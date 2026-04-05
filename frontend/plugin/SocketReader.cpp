@@ -3,23 +3,53 @@
 #include "client_command_generated.h"
 #include <QDebug>
 #include <QVariantMap>
-#include <QtEndian> // NEU: Für sicheres Auslesen des 4-Byte Size-Prefix
+#include <QtEndian>
 
 using namespace NiriShell;
 
-SocketReader::SocketReader(QObject *parent) : QObject(parent), m_socket(new QLocalSocket(this)) {
+SocketReader::SocketReader(QObject *parent) : QObject(parent), m_socket(new QLocalSocket(this)), m_reconnectTimer(new QTimer(this)) {
+    // Socket Events
     connect(m_socket, &QLocalSocket::readyRead, this, &SocketReader::onReadyRead);
     connect(m_socket, &QLocalSocket::connected, this, &SocketReader::onConnected);
+    connect(m_socket, &QLocalSocket::disconnected, this, &SocketReader::onDisconnected);
     connect(m_socket, &QLocalSocket::errorOccurred, this, &SocketReader::onError);
-    m_socket->connectToServer("/tmp/niri-quickshell.sock");
+
+    // Reconnect-Timer konfigurieren (Alle 2000 Millisekunden / 2 Sekunden)
+    m_reconnectTimer->setInterval(2000);
+    connect(m_reconnectTimer, &QTimer::timeout, this, &SocketReader::tryConnect);
+
+    // Initiale Verbindung direkt versuchen
+    tryConnect();
 }
 
 QVariantList SocketReader::workspaces() const { return m_workspaces; }
+QString SocketReader::activeWindowTitle() const { return m_activeWindowTitle; }
 int SocketReader::batteryPercent() const { return m_batteryPercent; }
 
-void SocketReader::onConnected() { qDebug() << "Erfolgreich mit Rust-Backend verbunden!"; }
+void SocketReader::tryConnect() {
+    if (m_socket->state() == QLocalSocket::UnconnectedState) {
+        // Wir probieren es im Hintergrund immer wieder...
+        m_socket->connectToServer("/tmp/niri-quickshell.sock");
+    }
+}
+
+void SocketReader::onConnected() {
+    qDebug() << "✅ Erfolgreich mit Rust-Backend verbunden!";
+    m_reconnectTimer->stop(); // Wir sind drin, Timer aus!
+}
+
+void SocketReader::onDisconnected() {
+    qWarning() << "⚠️ Verbindung zum Backend verloren. Starte Auto-Reconnect...";
+    m_buffer.clear(); // Wichtig: Alten Müll löschen, falls das Backend im halben Paket abgestürzt ist
+    m_reconnectTimer->start();
+}
+
 void SocketReader::onError(QLocalSocket::LocalSocketError socketError) {
-    qWarning() << "Socket-Fehler:" << m_socket->errorString();
+    // Fehler bedeutet meistens "Connection Refused" (Backend aus). 
+    // Wir ignorieren den Fehler und lassen den Timer (falls noch nicht an) starten.
+    if (!m_reconnectTimer->isActive()) {
+        m_reconnectTimer->start();
+    }
 }
 
 void SocketReader::onReadyRead() {
@@ -65,6 +95,14 @@ void SocketReader::onReadyRead() {
                 m_workspaces = newWorkspaces;
                 emit workspacesChanged();
             }
+        }
+
+        // --- Aktiven Fenster-Titel verarbeiten ---
+        auto title_fb = shellState->active_window_title();
+        QString newTitle = title_fb ? QString::fromStdString(title_fb->str()) : "";
+        if (m_activeWindowTitle != newTitle) {
+            m_activeWindowTitle = newTitle;
+            emit activeWindowTitleChanged();
         }
 
         // --- Akku verarbeiten ---

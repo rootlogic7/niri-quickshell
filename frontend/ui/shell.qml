@@ -1,93 +1,114 @@
 import QtQuick
 import Quickshell
-import NiriState 1.0 // Das ist unser C++ Plugin!
+import NiriState 1.0
 
 PanelWindow {
     id: root
-    
-    // Verankere die Bar oben am Bildschirm (Wayland Layer Shell)
+
+    // --- HIER IST DIE MAGIE GEGEN DAS QUADRAT ---
+    // Wir verankern das Fenster fest oben, links und rechts am Monitor.
     anchors {
         top: true
         left: true
         right: true
     }
-    height: 40
-    color: "#1e1e2e" // Ein schickes, dunkles Grau (Catppuccin Theme)
 
-    // Unser C++ Socket Reader im Hintergrund
+    // Wir sagen Wayland, dass die Leiste exakt 40 Pixel hoch sein soll.
+    implicitHeight: 40
+
+    // Eine Hintergrundfarbe für die Leiste
+    color: "#1e1e2e"
+
     SocketReader {
         id: niriReader
     }
 
-    // Zentrierte Anzeige der Workspaces
-    Row {
-        anchors.centerIn: parent
-        spacing: 12
+    // Ein Container-Item, das die ganze Leiste ausfüllt
+    Item {
+        anchors.fill: parent
 
-        // Loopt durch unsere FlatBuffers-Daten!
-        Repeater {
-            model: niriReader.workspaces
+        // 📍 LINKS: Navigation (Workspaces)
+        Row {
+            anchors {
+                left: parent.left
+                leftMargin: 16
+                verticalCenter: parent.verticalCenter
+            }
+            spacing: 8
 
-            Rectangle {
-                width: 120
-                implicitHeight: 28
-                radius: 6
-                // Wenn der Workspace aktiv ist (is_active == true), mach ihn blau, sonst dunkelgrau
-                color: modelData.is_active ? "#89b4fa" : "#313244"
+            Repeater {
+                model: niriReader.workspaces
 
-                Text {
-                    anchors.centerIn: parent
-                    text: modelData.name
-                    font.pixelSize: 14
-                    font.bold: modelData.is_active
-                    color: modelData.is_active ? "#1e1e2e" : "#cdd6f4"
-                }
+                Rectangle {
+                    width: 120
+                    implicitHeight: 28
+                    radius: 6
+                    color: modelData.is_active ? "#89b4fa" : "#313244"
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        // Hier rufen wir unsere C++ Funktion auf!
-                        niriReader.focusWorkspace(modelData.id)
+                    Text {
+                        anchors.centerIn: parent
+                        text: modelData.name
+                        font.pixelSize: 14
+                        font.bold: modelData.is_active
+                        color: modelData.is_active ? "#1e1e2e" : "#cdd6f4"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            niriReader.focusWorkspace(modelData.id)
+                        }
                     }
                 }
             }
         }
-    }
-    // Rechte Seite: System-Tray / Status-Module
-    Row {
-        anchors {
-            right: parent.right
-            rightMargin: 16
-            verticalCenter: parent.verticalCenter
-        }
-        spacing: 16
 
-        // Akku
+        // 📍 MITTE: Aktiver Fenster-Titel
         Text {
-            text: niriReader.batteryPercent + "%"
-            color: "#a6e3a1" // Grün
-            font.pixelSize: 14
-            font.bold: true
-        }
-
-        // Die Uhrzeit
-        Text {
-            id: clockText
+            anchors.centerIn: parent
+            // Fallback-Text, wenn kein Fenster offen ist
+            text: niriReader.activeWindowTitle !== "" ? niriReader.activeWindowTitle : "Niri Desktop"
             color: "#cdd6f4"
-            font.pixelSize: 14
+            font.pixelSize: 15
             font.bold: true
 
-            // Ein Timer, der jede Sekunde triggert und die Zeit aktualisiert
-            Timer {
-                interval: 1000 // 1 Sekunde
-                running: true
-                repeat: true
-                // Wenn das UI startet, sofort einmal ausführen, damit nicht "00:00" dasteht
-                triggeredOnStart: true 
-                onTriggered: {
-                    // JavaScript Date-Objekt formatieren
-                    clockText.text = new Date().toLocaleTimeString(Qt.locale(), "HH:mm:ss")
+            // Sehr wichtig: Verhindert, dass ultralange Titel (z.B. YouTube) die Leiste sprengen!
+            width: Math.min(implicitWidth, parent.width / 2.5)
+            elide: Text.ElideRight
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        // 📍 RECHTS: System & Metriken
+        Row {
+            anchors {
+                right: parent.right
+                rightMargin: 16
+                verticalCenter: parent.verticalCenter
+            }
+            spacing: 16
+
+            Text {
+                text: "🔋 " + niriReader.batteryPercent + "%"
+                color: "#a6e3a1"
+                font.pixelSize: 14
+                font.bold: true
+            }
+
+            Text {
+                id: clockText
+                color: "#cdd6f4"
+                font.pixelSize: 14
+                font.bold: true
+
+                Timer {
+                    interval: 1000
+                    running: true
+                    repeat: true
+                    triggeredOnStart: true 
+                    onTriggered: {
+                        clockText.text = new Date().toLocaleTimeString(Qt.locale(), "HH:mm:ss")
+                    }
                 }
             }
         }
