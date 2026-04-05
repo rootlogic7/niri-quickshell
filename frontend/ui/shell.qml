@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import NiriState 1.0
+import QtQuick.Controls
 
 PanelWindow {
     id: root
@@ -132,6 +133,12 @@ PanelWindow {
                 color: niriReader.audioMuted ? "#f38ba8" : "#89b4fa"
                 font.pixelSize: 14
                 font.bold: true
+                
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: niriReader.toggleAudioMute()
+                }
             }
 
             Text {
@@ -152,8 +159,42 @@ PanelWindow {
                     running: true
                     repeat: true
                     triggeredOnStart: true 
-                    onTriggered: {
-                        clockText.text = new Date().toLocaleTimeString(Qt.locale(), "HH:mm:ss")
+                    onTriggered: clockText.text = new Date().toLocaleTimeString(Qt.locale(), "HH:mm:ss")
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: calendarPopup.opened ? calendarPopup.close() : calendarPopup.open()
+                }
+
+                // Das Kalender-Popup
+                Popup {
+                    id: calendarPopup
+                    // Positionierung: Unterhalb der Leiste, rechtsbündig
+                    y: 30 
+                    x: -150 
+                    width: 220
+                    height: 250
+                    background: Rectangle {
+                        color: "#1e1e2e"
+                        radius: 8
+                        border.color: "#313244"
+                        border.width: 1
+                    }
+
+                    // Ein simpler nativer Kalender
+                    // (Falls dein Qt-Setup DayOfWeekRow etc. vermisst, tut es für den Anfang auch ein Platzhalter-Text)
+                    contentItem: Item {
+                        Text {
+                            anchors.top: parent.top
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: new Date().toLocaleDateString(Qt.locale(), "dddd, d. MMMM yyyy")
+                            color: "#cdd6f4"
+                            font.bold: true
+                            font.pixelSize: 14
+                        }
+                        // Hier könnten wir später einen echten MonthGrid() einfügen!
                     }
                 }
             }

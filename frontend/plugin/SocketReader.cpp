@@ -156,3 +156,12 @@ void SocketReader::launchMenu() {
     m_socket->write(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
     m_socket->flush();
 }
+
+void SocketReader::toggleAudioMute() {
+    flatbuffers::FlatBufferBuilder builder;
+    auto action = builder.CreateString("toggle_audio_mute");
+    auto cmd = NiriShell::CreateClientCommand(builder, action, 0);
+    builder.Finish(cmd);
+    m_socket->write(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+    m_socket->flush();
+}

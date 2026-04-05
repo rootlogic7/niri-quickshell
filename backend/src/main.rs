@@ -9,9 +9,36 @@ use flatbuffers::FlatBufferBuilder;
 use tokio::net::UnixListener;
 use tokio::io::{AsyncWriteExt, AsyncReadExt, AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tokio::sync::mpsc; // <--- NEU: Unser Event-Channel
 use std::process::Stdio;
 use std::fs;
 use serde::Deserialize;
+use futures_lite::stream::StreamExt;
+
+// --- D-BUS SCHNITTSTELLEN FÜR NETWORKMANAGER ---
+
+#[zbus::proxy(
+    interface = "org.freedesktop.NetworkManager",
+    default_service = "org.freedesktop.NetworkManager",
+    default_path = "/org/freedesktop/NetworkManager"
+)]
+trait NetworkManager {
+    // D-Bus Property für die aktuell aktive Verbindung
+    #[zbus(property)]
+    fn primary_connection(&self) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+}
+
+#[zbus::proxy(
+    interface = "org.freedesktop.NetworkManager.Connection.Active",
+    default_service = "org.freedesktop.NetworkManager"
+)]
+trait ActiveConnection {
+    // D-Bus Property für den Namen (SSID) der Verbindung
+    #[zbus(property)]
+    fn id(&self) -> zbus::Result<String>;
+}
+
+// ------------------------------------------------
 
 #[derive(Deserialize, Debug)]
 struct NiriWorkspace {
@@ -28,21 +55,26 @@ struct NiriWindow {
     is_focused: bool,
 }
 
-// Sucht das aktive Fenster und gibt dessen Titel zurück
+// --- HILFSFUNKTIONEN ---
+
+async fn fetch_workspaces() -> Vec<NiriWorkspace> {
+    let output = match Command::new("niri").args(&["msg", "-j", "workspaces"]).output().await {
+        Ok(o) => o,
+        Err(_) => return vec![],
+    };
+    serde_json::from_slice(&output.stdout).unwrap_or_default()
+}
+
 async fn fetch_active_window_title() -> Option<String> {
     let output = Command::new("niri").args(&["msg", "-j", "windows"]).output().await.ok()?;
-    
     if let Ok(windows) = serde_json::from_slice::<Vec<NiriWindow>>(&output.stdout) {
         for w in windows {
-            if w.is_focused {
-                return w.title; // Gibt den Titel zurück, falls vorhanden
-            }
+            if w.is_focused { return w.title; }
         }
     }
     None
 }
 
-// Liest den Akku direkt aus dem Linux-Kernel aus (0 % CPU overhead)
 fn get_battery_percent() -> i8 {
     if let Ok(bat) = fs::read_to_string("/sys/class/power_supply/BAT0/capacity") {
         return bat.trim().parse().unwrap_or(100);
@@ -50,20 +82,14 @@ fn get_battery_percent() -> i8 {
     if let Ok(bat) = fs::read_to_string("/sys/class/power_supply/BAT1/capacity") {
         return bat.trim().parse().unwrap_or(100);
     }
-    100 // Fallback für Desktop-PCs
+    100 
 }
 
-// Liest die Lautstärke und den Mute-Status über WirePlumber aus
 fn get_audio_state() -> (i8, bool) {
-    if let Ok(output) = std::process::Command::new("wpctl")
-        .args(&["get-volume", "@DEFAULT_AUDIO_SINK@"])
-        .output()
-    {
+    if let Ok(output) = std::process::Command::new("wpctl").args(&["get-volume", "@DEFAULT_AUDIO_SINK@"]).output() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let mut volume: i8 = 0;
         let muted = stdout.contains("[MUTED]");
-
-        // Wir zerlegen den String, um an die Zahl (z.B. "0.45") zu kommen
         if let Some(vol_str) = stdout.split_whitespace().nth(1) {
             if let Ok(vol_float) = vol_str.parse::<f32>() {
                 volume = (vol_float * 100.0).round() as i8;
@@ -71,194 +97,157 @@ fn get_audio_state() -> (i8, bool) {
         }
         return (volume, muted);
     }
-    (0, true) // Fallback, falls wpctl fehlschlägt
+    (0, true)
 }
 
-// Liest das aktuell aktive Netzwerk (WLAN oder LAN) über nmcli aus
-fn get_network_name() -> String {
-    if let Ok(output) = std::process::Command::new("nmcli")
-        .args(&["-t", "-f", "TYPE,NAME", "connection", "show", "--active"])
-        .output()
-    {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        for line in stdout.lines() {
-            // Wir suchen gezielt nach WLAN oder Kabelverbindungen
-            if line.starts_with("802-11-wireless:") || line.starts_with("802-3-ethernet:") {
-                // Splitte beim ersten Doppelpunkt
-                let parts: Vec<&str> = line.splitn(2, ':').collect();
-                if parts.len() == 2 {
-                    return parts[1].to_string(); // Gibt den echten Namen zurück
+// Liest asynchron (ohne Prozess-Spawning) direkt aus dem D-Bus!
+async fn get_network_name_dbus(conn: &zbus::Connection) -> String {
+    if let Ok(nm) = NetworkManagerProxy::new(conn).await {
+        if let Ok(path) = nm.primary_connection().await {
+            if path.as_str() != "/" {
+                // Verbinde zum spezifischen Pfad der aktiven Verbindung
+                if let Ok(active) = ActiveConnectionProxy::builder(conn).path(path).unwrap().build().await {
+                    if let Ok(id) = active.id().await {
+                        return id;
+                    }
                 }
             }
         }
     }
-    "Offline".to_string() // Fallback, falls kein Netz da ist
+    "Offline".to_string()
 }
 
-// OPTIMIERUNG 1: Keine Panics mehr! Gibt einfach eine leere Liste zurück, wenn Niri fehlt.
-async fn fetch_workspaces() -> Vec<NiriWorkspace> {
-    let output = match Command::new("niri").args(&["msg", "-j", "workspaces"]).output().await {
-        Ok(o) => o,
-        Err(e) => {
-            eprintln!("⚠️ Konnte Niri nicht erreichen: {}", e);
-            return vec![];
-        }
-    };
-
-    let raw_json = String::from_utf8_lossy(&output.stdout);
-
-    match serde_json::from_slice(&output.stdout) {
-        Ok(workspaces) => workspaces,
-        Err(e) => {
-            eprintln!("❌ JSON Parse Fehler: {}", e);
-            eprintln!("📦 Rohes Niri JSON: {}", raw_json);
-            vec![]
-        }
-    }
-}
+// --- HAUPTSCHLEIFE ---
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let socket_path = "/tmp/niri-quickshell.sock";
     let _ = fs::remove_file(socket_path);
-
     let listener = UnixListener::bind(socket_path)?;
+    
+    // Baue EINMALIGE Verbindung zum System-D-Bus auf
+    let dbus_conn = zbus::Connection::system().await?;
+    
     println!("🚀 Rust Backend bereit! Warte auf Quickshell...");
 
     loop {
-        // OPTIMIERUNG 2: Kein Absturz bei Verbindungsfehlern
         let stream = match listener.accept().await {
             Ok((s, _)) => s,
-            Err(e) => {
-                eprintln!("⚠️ Warnung: Fehler bei eingehender Socket-Verbindung: {}", e);
-                continue; // Schleife läuft einfach weiter!
-            }
+            Err(_) => continue,
         };
         
-        println!("✅ Quickshell verbunden! Klinke in Niri-Events ein...");
+        println!("✅ Quickshell verbunden! Initialisiere Event-Kanäle...");
         let (mut rx, mut tx) = tokio::io::split(stream);
 
-        // TASK 1: Lauscht auf Niri-Events UND den Akku-Timer
+        // Wir erstellen einen Channel. Wenn IRGENDWER (Niri, NetworkManager, Timer)
+        // () in diesen Sender (update_tx) wirft, pusht die Hauptschleife an Quickshell!
+        let (update_tx, mut update_rx) = mpsc::channel::<()>(20);
+
+        // --- TASK 1: Niri Event Listener ---
+        let tx_niri = update_tx.clone();
         tokio::spawn(async move {
-            let mut event_stream = match Command::new("niri")
-                .args(&["msg", "-j", "event-stream"])
-                .stdout(Stdio::piped())
-                .spawn() 
-            {
-                Ok(child) => child,
-                Err(e) => {
-                    eprintln!("⚠️ Konnte niri event-stream nicht starten: {}", e);
-                    return;
-                }
-            };
-
-            if let Some(stdout) = event_stream.stdout.take() {
-                let mut reader = BufReader::new(stdout).lines();
-                // Timer, der jede Minute triggert
-                let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
-
-                if !send_state_to_quickshell(&mut tx).await { return; }
-
-                loop {
-                    tokio::select! {
-                        // Entweder Niri meldet einen Klick...
-                        line = reader.next_line() => {
-                            if let Ok(Some(_)) = line {
-                                if !send_state_to_quickshell(&mut tx).await { break; }
-                            } else {
-                                break;
-                            }
-                        }
-                        // ...oder eine Minute ist vergangen (Akku Update)
-                        _ = interval.tick() => {
-                            if !send_state_to_quickshell(&mut tx).await { break; }
-                        }
+            if let Ok(mut event_stream) = Command::new("niri").args(&["msg", "-j", "event-stream"]).stdout(Stdio::piped()).spawn() {
+                if let Some(stdout) = event_stream.stdout.take() {
+                    let mut reader = BufReader::new(stdout).lines();
+                    while let Ok(Some(_)) = reader.next_line().await {
+                        let _ = tx_niri.send(()).await; // Melde: Niri hat sich geändert!
                     }
                 }
             }
         });
 
-        // TASK 2: C++ Kommandos zu Niri
+        // --- TASK 2: NetworkManager D-Bus Listener ---
+        let tx_nm = update_tx.clone();
+        let dbus_conn_clone = dbus_conn.clone();
+        tokio::spawn(async move {
+            if let Ok(nm) = NetworkManagerProxy::new(&dbus_conn_clone).await {
+                // HIER IST DER FIX: Die Funktion gibt den Stream direkt zurück, kein Result!
+                let mut stream = nm.receive_primary_connection_changed().await;
+                
+                while let Some(_) = stream.next().await {
+                    let _ = tx_nm.send(()).await; // Melde: WLAN hat sich geändert!
+                }
+            }
+        });
+
+        // --- TASK 3: Audio & Sensor Timer (Polling) ---
+        // Audio könnte man auch per D-Bus/Pipewire machen, aber als Einstieg belassen 
+        // wir hier den einfachen Timer.
+        let tx_timer = update_tx.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
+            loop {
+                interval.tick().await;
+                if tx_timer.send(()).await.is_err() { break; }
+            }
+        });
+
+        // --- TASK 4: C++ Kommandos zu Niri / Audio ---
         tokio::spawn(async move {
             let mut buf = vec![0u8; 1024]; 
-            
             while let Ok(n) = rx.read(&mut buf).await {
                 if n == 0 { break; } 
-
                 if let Ok(cmd) = root_as_client_command(&buf[..n]) {
                     if let Some(action) = cmd.action() {
                         if action == "focus_workspace" {
-                            let ws_id = cmd.arg_int();
-                            
-                            // OPTIMIERUNG 3: output().await verhindert Zombie-Prozesse
-                            let _ = Command::new("niri")
-                                .args(&["msg", "action", "focus-workspace", &ws_id.to_string()])
-                                .output()
-                                .await;
-                        } else if action == "launch_menu" { // <--- NEU
-                            println!("🚀 UI Befehl empfangen: Öffne App-Launcher");
-                            
-                            // Wir nutzen Niri's "spawn" Befehl, damit das neue Fenster 
-                            // garantiert den korrekten Fokus auf Wayland bekommt!
-                            // Ändere "fuzzel" hier zu "wofi" oder "rofi", je nachdem, was du installiert hast.
-                            let _ = Command::new("niri")
-                                .args(&["msg", "action", "spawn", "--", "fuzzel"])
-                                .output()
-                                .await;
+                            let _ = Command::new("niri").args(&["msg", "action", "focus-workspace", &cmd.arg_int().to_string()]).output().await;
+                        } else if action == "launch_menu" {
+                            let _ = Command::new("niri").args(&["msg", "action", "spawn", "--", "fuzzel"]).output().await;
+                        } else if action == "toggle_audio_mute" {
+                            let _ = Command::new("wpctl").args(&["set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]).output().await;
                         }
                     }
                 }
             }
         });
+
+        // --- HAUPT EVENT LOOP ---
+        // Dies ist der "Dirigent". Er wartet auf ein Signal aus einem der obigen Tasks.
+        // Sobald eins kommt, schnürt er das Paket.
+        let mut first_run = true;
+        
+        loop {
+            if !first_run {
+                if update_rx.recv().await.is_none() { break; } // Warte auf irgendein Update!
+            }
+            first_run = false;
+
+            let mut workspaces_data = fetch_workspaces().await;
+            workspaces_data.sort_by_key(|ws| ws.idx);
+            let mut builder = FlatBufferBuilder::new();
+
+            let mut ws_offsets = Vec::new();
+            for ws in workspaces_data {
+                let name_str = ws.name.unwrap_or_else(|| ws.idx.to_string());
+                let name_fb = builder.create_string(&name_str);
+                ws_offsets.push(Workspace::create(&mut builder, &WorkspaceArgs {
+                    id: ws.idx as _, name: Some(name_fb), is_active: ws.is_active,
+                }));
+            }
+            let workspaces_vec = builder.create_vector(&ws_offsets);
+            
+            let active_title = fetch_active_window_title().await;
+            let title_fb = active_title.as_ref().map(|t| builder.create_string(t));
+
+            let (vol, muted) = get_audio_state();
+            
+            // D-BUS Abfrage statt nmcli (0% CPU, 0 Spawns)
+            let net_name = get_network_name_dbus(&dbus_conn).await;
+            let net_name_fb = builder.create_string(&net_name);
+
+            let shell_state = ShellState::create(&mut builder, &ShellStateArgs {
+                workspaces: Some(workspaces_vec),
+                battery_percent: get_battery_percent(),
+                active_window_title: title_fb,
+                audio_volume: vol,
+                audio_muted: muted,
+                network_name: Some(net_name_fb),
+            });
+
+            builder.finish_size_prefixed(shell_state, None);
+            if let Err(_) = tx.write_all(builder.finished_data()).await {
+                break; // Socket tot -> Schleife beenden, auf Reconnect warten
+            }
+        }
     }
-}
-
-async fn send_state_to_quickshell(tx: &mut tokio::io::WriteHalf<tokio::net::UnixStream>) -> bool {
-    let mut workspaces_data = fetch_workspaces().await;
-    workspaces_data.sort_by_key(|ws| ws.idx);
-    let mut builder = FlatBufferBuilder::new();
-
-    let mut ws_offsets = Vec::new();
-
-    for ws in workspaces_data {
-        let name_str = ws.name.unwrap_or_else(|| ws.idx.to_string());
-        let name_fb = builder.create_string(&name_str);
-
-        let ws_offset = Workspace::create(&mut builder, &WorkspaceArgs {
-            id: ws.idx as _,
-            name: Some(name_fb),
-            is_active: ws.is_active,
-        });
-        ws_offsets.push(ws_offset);
-    }
-
-    let workspaces_vec = builder.create_vector(&ws_offsets);
-
-    let active_title = fetch_active_window_title().await;
-    let title_fb = active_title.as_ref().map(|t| builder.create_string(t));
-
-    let (vol, muted) = get_audio_state();
-
-    let net_name = get_network_name();
-    let net_name_fb = builder.create_string(&net_name);
-
-    let shell_state = ShellState::create(&mut builder, &ShellStateArgs {
-        workspaces: Some(workspaces_vec),
-        battery_percent: get_battery_percent(),
-        active_window_title: title_fb,
-        audio_volume: vol,
-        audio_muted: muted,
-        network_name: Some(net_name_fb),
-    });
-
-    // NUR EINMAL ABSCHLIESSEN (mit Size Prefix!)
-    builder.finish_size_prefixed(shell_state, None);
-    let data = builder.finished_data();
-
-    // Und ab damit in den Socket
-    if let Err(e) = tx.write_all(data).await {
-        eprintln!("❌ Verbindung zu Quickshell abgebrochen: {}", e);
-        return false;
-    }
-    true
 }

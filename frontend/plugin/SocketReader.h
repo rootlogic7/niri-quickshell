@@ -26,6 +26,7 @@ public:
     QString activeWindowTitle() const;
     Q_INVOKABLE void focusWorkspace(int id);
     Q_INVOKABLE void launchMenu();
+    Q_INVOKABLE void toggleAudioMute();
     int audioVolume() const;
     bool audioMuted() const;
     QString networkName() const;
