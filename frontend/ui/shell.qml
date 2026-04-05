@@ -30,7 +30,7 @@ PanelWindow {
 
             Rectangle {
                 width: 120
-                height: 28
+                implicitHeight: 28
                 radius: 6
                 // Wenn der Workspace aktiv ist (is_active == true), mach ihn blau, sonst dunkelgrau
                 color: modelData.is_active ? "#89b4fa" : "#313244"
