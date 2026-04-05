@@ -74,6 +74,27 @@ fn get_audio_state() -> (i8, bool) {
     (0, true) // Fallback, falls wpctl fehlschlägt
 }
 
+// Liest das aktuell aktive Netzwerk (WLAN oder LAN) über nmcli aus
+fn get_network_name() -> String {
+    if let Ok(output) = std::process::Command::new("nmcli")
+        .args(&["-t", "-f", "TYPE,NAME", "connection", "show", "--active"])
+        .output()
+    {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            // Wir suchen gezielt nach WLAN oder Kabelverbindungen
+            if line.starts_with("802-11-wireless:") || line.starts_with("802-3-ethernet:") {
+                // Splitte beim ersten Doppelpunkt
+                let parts: Vec<&str> = line.splitn(2, ':').collect();
+                if parts.len() == 2 {
+                    return parts[1].to_string(); // Gibt den echten Namen zurück
+                }
+            }
+        }
+    }
+    "Offline".to_string() // Fallback, falls kein Netz da ist
+}
+
 // OPTIMIERUNG 1: Keine Panics mehr! Gibt einfach eine leere Liste zurück, wenn Niri fehlt.
 async fn fetch_workspaces() -> Vec<NiriWorkspace> {
     let output = match Command::new("niri").args(&["msg", "-j", "workspaces"]).output().await {
@@ -218,12 +239,16 @@ async fn send_state_to_quickshell(tx: &mut tokio::io::WriteHalf<tokio::net::Unix
 
     let (vol, muted) = get_audio_state();
 
+    let net_name = get_network_name();
+    let net_name_fb = builder.create_string(&net_name);
+
     let shell_state = ShellState::create(&mut builder, &ShellStateArgs {
         workspaces: Some(workspaces_vec),
         battery_percent: get_battery_percent(),
         active_window_title: title_fb,
         audio_volume: vol,
         audio_muted: muted,
+        network_name: Some(net_name_fb),
     });
 
     // NUR EINMAL ABSCHLIESSEN (mit Size Prefix!)

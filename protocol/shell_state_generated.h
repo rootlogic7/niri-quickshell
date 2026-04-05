@@ -104,7 +104,8 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_BATTERY_PERCENT = 6,
     VT_ACTIVE_WINDOW_TITLE = 8,
     VT_AUDIO_VOLUME = 10,
-    VT_AUDIO_MUTED = 12
+    VT_AUDIO_MUTED = 12,
+    VT_NETWORK_NAME = 14
   };
   const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *>(VT_WORKSPACES);
@@ -121,6 +122,9 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   bool audio_muted() const {
     return GetField<uint8_t>(VT_AUDIO_MUTED, 0) != 0;
   }
+  const ::flatbuffers::String *network_name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NETWORK_NAME);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -132,6 +136,8 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            verifier.VerifyString(active_window_title()) &&
            VerifyField<int8_t>(verifier, VT_AUDIO_VOLUME, 1) &&
            VerifyField<uint8_t>(verifier, VT_AUDIO_MUTED, 1) &&
+           VerifyOffset(verifier, VT_NETWORK_NAME) &&
+           verifier.VerifyString(network_name()) &&
            verifier.EndTable();
   }
 };
@@ -155,6 +161,9 @@ struct ShellStateBuilder {
   void add_audio_muted(bool audio_muted) {
     fbb_.AddElement<uint8_t>(ShellState::VT_AUDIO_MUTED, static_cast<uint8_t>(audio_muted), 0);
   }
+  void add_network_name(::flatbuffers::Offset<::flatbuffers::String> network_name) {
+    fbb_.AddOffset(ShellState::VT_NETWORK_NAME, network_name);
+  }
   explicit ShellStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -172,8 +181,10 @@ inline ::flatbuffers::Offset<ShellState> CreateShellState(
     int8_t battery_percent = 0,
     ::flatbuffers::Offset<::flatbuffers::String> active_window_title = 0,
     int8_t audio_volume = 0,
-    bool audio_muted = false) {
+    bool audio_muted = false,
+    ::flatbuffers::Offset<::flatbuffers::String> network_name = 0) {
   ShellStateBuilder builder_(_fbb);
+  builder_.add_network_name(network_name);
   builder_.add_active_window_title(active_window_title);
   builder_.add_workspaces(workspaces);
   builder_.add_audio_muted(audio_muted);
@@ -188,16 +199,19 @@ inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
     int8_t battery_percent = 0,
     const char *active_window_title = nullptr,
     int8_t audio_volume = 0,
-    bool audio_muted = false) {
+    bool audio_muted = false,
+    const char *network_name = nullptr) {
   auto workspaces__ = workspaces ? _fbb.CreateVector<::flatbuffers::Offset<NiriShell::Workspace>>(*workspaces) : 0;
   auto active_window_title__ = active_window_title ? _fbb.CreateString(active_window_title) : 0;
+  auto network_name__ = network_name ? _fbb.CreateString(network_name) : 0;
   return NiriShell::CreateShellState(
       _fbb,
       workspaces__,
       battery_percent,
       active_window_title__,
       audio_volume,
-      audio_muted);
+      audio_muted,
+      network_name__);
 }
 
 inline const NiriShell::ShellState *GetShellState(const void *buf) {

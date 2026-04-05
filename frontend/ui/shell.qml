@@ -116,7 +116,15 @@ PanelWindow {
             }
             spacing: 16
 
-            // --- NEU: Audio ---
+            // --- NEU: Netzwerk/WLAN ---
+            Text {
+                text: niriReader.networkName === "Offline" ? "⚠️ Offline" : "📶 " + niriReader.networkName
+                color: niriReader.networkName === "Offline" ? "#f38ba8" : "#cdd6f4"
+                font.pixelSize: 14
+                font.bold: true
+            }
+
+            // --- Audio ---
             Text {
                 // Zeigt 🔇 wenn stummgeschaltet, sonst 🔊
                 text: (niriReader.audioMuted ? "🔇 " : "🔊 ") + niriReader.audioVolume + "%"

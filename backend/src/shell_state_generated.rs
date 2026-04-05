@@ -158,6 +158,7 @@ impl<'a> ShellState<'a> {
   pub const VT_ACTIVE_WINDOW_TITLE: ::flatbuffers::VOffsetT = 8;
   pub const VT_AUDIO_VOLUME: ::flatbuffers::VOffsetT = 10;
   pub const VT_AUDIO_MUTED: ::flatbuffers::VOffsetT = 12;
+  pub const VT_NETWORK_NAME: ::flatbuffers::VOffsetT = 14;
 
   #[inline]
   pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -169,6 +170,7 @@ impl<'a> ShellState<'a> {
     args: &'args ShellStateArgs<'args>
   ) -> ::flatbuffers::WIPOffset<ShellState<'bldr>> {
     let mut builder = ShellStateBuilder::new(_fbb);
+    if let Some(x) = args.network_name { builder.add_network_name(x); }
     if let Some(x) = args.active_window_title { builder.add_active_window_title(x); }
     if let Some(x) = args.workspaces { builder.add_workspaces(x); }
     builder.add_audio_muted(args.audio_muted);
@@ -213,6 +215,13 @@ impl<'a> ShellState<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<bool>(ShellState::VT_AUDIO_MUTED, Some(false)).unwrap()}
   }
+  #[inline]
+  pub fn network_name(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(ShellState::VT_NETWORK_NAME, None)}
+  }
 }
 
 impl ::flatbuffers::Verifiable for ShellState<'_> {
@@ -226,6 +235,7 @@ impl ::flatbuffers::Verifiable for ShellState<'_> {
      .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("active_window_title", Self::VT_ACTIVE_WINDOW_TITLE, false)?
      .visit_field::<i8>("audio_volume", Self::VT_AUDIO_VOLUME, false)?
      .visit_field::<bool>("audio_muted", Self::VT_AUDIO_MUTED, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("network_name", Self::VT_NETWORK_NAME, false)?
      .finish();
     Ok(())
   }
@@ -236,6 +246,7 @@ pub struct ShellStateArgs<'a> {
     pub active_window_title: Option<::flatbuffers::WIPOffset<&'a str>>,
     pub audio_volume: i8,
     pub audio_muted: bool,
+    pub network_name: Option<::flatbuffers::WIPOffset<&'a str>>,
 }
 impl<'a> Default for ShellStateArgs<'a> {
   #[inline]
@@ -246,6 +257,7 @@ impl<'a> Default for ShellStateArgs<'a> {
       active_window_title: None,
       audio_volume: 0,
       audio_muted: false,
+      network_name: None,
     }
   }
 }
@@ -276,6 +288,10 @@ impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ShellStateBuilder<'a, 'b, A> 
     self.fbb_.push_slot::<bool>(ShellState::VT_AUDIO_MUTED, audio_muted, false);
   }
   #[inline]
+  pub fn add_network_name(&mut self, network_name: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(ShellState::VT_NETWORK_NAME, network_name);
+  }
+  #[inline]
   pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ShellStateBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     ShellStateBuilder {
@@ -298,6 +314,7 @@ impl ::core::fmt::Debug for ShellState<'_> {
       ds.field("active_window_title", &self.active_window_title());
       ds.field("audio_volume", &self.audio_volume());
       ds.field("audio_muted", &self.audio_muted());
+      ds.field("network_name", &self.network_name());
       ds.finish()
   }
 }

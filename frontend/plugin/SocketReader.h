@@ -17,6 +17,7 @@ class SocketReader : public QObject {
     Q_PROPERTY(QString activeWindowTitle READ activeWindowTitle NOTIFY activeWindowTitleChanged)
     Q_PROPERTY(int audioVolume READ audioVolume NOTIFY audioVolumeChanged) // NEU
     Q_PROPERTY(bool audioMuted READ audioMuted NOTIFY audioMutedChanged)
+    Q_PROPERTY(QString networkName READ networkName NOTIFY networkNameChanged)
 
 public:
     explicit SocketReader(QObject *parent = nullptr);
@@ -27,6 +28,7 @@ public:
     Q_INVOKABLE void launchMenu();
     int audioVolume() const;
     bool audioMuted() const;
+    QString networkName() const;
 
 signals:
     void workspacesChanged();
@@ -34,6 +36,7 @@ signals:
     void activeWindowTitleChanged();
     void audioVolumeChanged();
     void audioMutedChanged();
+    void networkNameChanged();
 
 private slots:
     void onReadyRead();
@@ -51,4 +54,5 @@ private:
     QString m_activeWindowTitle;
     int m_audioVolume = 0;
     bool m_audioMuted = false;
+    QString m_networkName = "Offline";
 };

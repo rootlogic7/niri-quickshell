@@ -27,6 +27,7 @@ QString SocketReader::activeWindowTitle() const { return m_activeWindowTitle; }
 int SocketReader::batteryPercent() const { return m_batteryPercent; }
 int SocketReader::audioVolume() const { return m_audioVolume; }
 bool SocketReader::audioMuted() const { return m_audioMuted; }
+QString SocketReader::networkName() const { return m_networkName; }
 
 void SocketReader::tryConnect() {
     if (m_socket->state() == QLocalSocket::UnconnectedState) {
@@ -125,6 +126,14 @@ void SocketReader::onReadyRead() {
         if (m_audioMuted != newMuted) {
             m_audioMuted = newMuted;
             emit audioMutedChanged();
+        }
+
+        // --- Netzwerk verarbeiten ---
+        auto net_fb = shellState->network_name();
+        QString newNet = net_fb ? QString::fromStdString(net_fb->str()) : "Offline";
+        if (m_networkName != newNet) {
+            m_networkName = newNet;
+            emit networkNameChanged();
         }
     }
 }
