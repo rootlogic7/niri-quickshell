@@ -15,7 +15,7 @@ table ShellState {
   workspaces: [Workspace]; // Eine Liste aller aktuellen Workspaces
   
   // Platzhalter für die Zukunft:
-  // battery_percent: int8;
+  battery_percent: int8;
   // volume_percent: int8;
 }
 

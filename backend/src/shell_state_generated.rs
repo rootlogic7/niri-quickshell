@@ -154,6 +154,7 @@ impl<'a> ::flatbuffers::Follow<'a> for ShellState<'a> {
 
 impl<'a> ShellState<'a> {
   pub const VT_WORKSPACES: ::flatbuffers::VOffsetT = 4;
+  pub const VT_BATTERY_PERCENT: ::flatbuffers::VOffsetT = 6;
 
   #[inline]
   pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -166,6 +167,7 @@ impl<'a> ShellState<'a> {
   ) -> ::flatbuffers::WIPOffset<ShellState<'bldr>> {
     let mut builder = ShellStateBuilder::new(_fbb);
     if let Some(x) = args.workspaces { builder.add_workspaces(x); }
+    builder.add_battery_percent(args.battery_percent);
     builder.finish()
   }
 
@@ -177,6 +179,13 @@ impl<'a> ShellState<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<Workspace>>>>(ShellState::VT_WORKSPACES, None)}
   }
+  #[inline]
+  pub fn battery_percent(&self) -> i8 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i8>(ShellState::VT_BATTERY_PERCENT, Some(0)).unwrap()}
+  }
 }
 
 impl ::flatbuffers::Verifiable for ShellState<'_> {
@@ -186,18 +195,21 @@ impl ::flatbuffers::Verifiable for ShellState<'_> {
   ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
     v.visit_table(pos)?
      .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<Workspace>>>>("workspaces", Self::VT_WORKSPACES, false)?
+     .visit_field::<i8>("battery_percent", Self::VT_BATTERY_PERCENT, false)?
      .finish();
     Ok(())
   }
 }
 pub struct ShellStateArgs<'a> {
     pub workspaces: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<Workspace<'a>>>>>,
+    pub battery_percent: i8,
 }
 impl<'a> Default for ShellStateArgs<'a> {
   #[inline]
   fn default() -> Self {
     ShellStateArgs {
       workspaces: None,
+      battery_percent: 0,
     }
   }
 }
@@ -210,6 +222,10 @@ impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ShellStateBuilder<'a, 'b, A> 
   #[inline]
   pub fn add_workspaces(&mut self, workspaces: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b , ::flatbuffers::ForwardsUOffset<Workspace<'b >>>>) {
     self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(ShellState::VT_WORKSPACES, workspaces);
+  }
+  #[inline]
+  pub fn add_battery_percent(&mut self, battery_percent: i8) {
+    self.fbb_.push_slot::<i8>(ShellState::VT_BATTERY_PERCENT, battery_percent, 0);
   }
   #[inline]
   pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ShellStateBuilder<'a, 'b, A> {
@@ -230,6 +246,7 @@ impl ::core::fmt::Debug for ShellState<'_> {
   fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
     let mut ds = f.debug_struct("ShellState");
       ds.field("workspaces", &self.workspaces());
+      ds.field("battery_percent", &self.battery_percent());
       ds.finish()
   }
 }

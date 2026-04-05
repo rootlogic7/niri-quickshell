@@ -15,10 +15,22 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 struct NiriWorkspace {
+    #[allow(dead_code)]
     id: u64,
     idx: u64,
     name: Option<String>,
     is_active: bool,
+}
+
+// Liest den Akku direkt aus dem Linux-Kernel aus (0 % CPU overhead)
+fn get_battery_percent() -> i8 {
+    if let Ok(bat) = fs::read_to_string("/sys/class/power_supply/BAT0/capacity") {
+        return bat.trim().parse().unwrap_or(100);
+    }
+    if let Ok(bat) = fs::read_to_string("/sys/class/power_supply/BAT1/capacity") {
+        return bat.trim().parse().unwrap_or(100);
+    }
+    100 // Fallback für Desktop-PCs
 }
 
 // OPTIMIERUNG 1: Keine Panics mehr! Gibt einfach eine leere Liste zurück, wenn Niri fehlt.
@@ -64,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("✅ Quickshell verbunden! Klinke in Niri-Events ein...");
         let (mut rx, mut tx) = tokio::io::split(stream);
 
-        // TASK 1: Niri-Events zu C++
+        // TASK 1: Lauscht auf Niri-Events UND den Akku-Timer
         tokio::spawn(async move {
             let mut event_stream = match Command::new("niri")
                 .args(&["msg", "-j", "event-stream"])
@@ -80,11 +92,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Some(stdout) = event_stream.stdout.take() {
                 let mut reader = BufReader::new(stdout).lines();
+                // Timer, der jede Minute triggert
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
 
                 if !send_state_to_quickshell(&mut tx).await { return; }
 
-                while let Ok(Some(_line)) = reader.next_line().await {
-                    if !send_state_to_quickshell(&mut tx).await { break; }
+                loop {
+                    tokio::select! {
+                        // Entweder Niri meldet einen Klick...
+                        line = reader.next_line() => {
+                            if let Ok(Some(_)) = line {
+                                if !send_state_to_quickshell(&mut tx).await { break; }
+                            } else {
+                                break;
+                            }
+                        }
+                        // ...oder eine Minute ist vergangen (Akku Update)
+                        _ = interval.tick() => {
+                            if !send_state_to_quickshell(&mut tx).await { break; }
+                        }
+                    }
                 }
             }
         });
@@ -137,11 +164,14 @@ async fn send_state_to_quickshell(tx: &mut tokio::io::WriteHalf<tokio::net::Unix
 
     let shell_state = ShellState::create(&mut builder, &ShellStateArgs {
         workspaces: Some(workspaces_vec),
+        battery_percent: get_battery_percent(),
     });
 
-    builder.finish(shell_state, None);
+    // NUR EINMAL ABSCHLIESSEN (mit Size Prefix!)
+    builder.finish_size_prefixed(shell_state, None);
     let data = builder.finished_data();
 
+    // Und ab damit in den Socket
     if let Err(e) = tx.write_all(data).await {
         eprintln!("❌ Verbindung zu Quickshell abgebrochen: {}", e);
         return false;

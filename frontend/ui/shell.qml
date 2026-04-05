@@ -54,4 +54,42 @@ PanelWindow {
             }
         }
     }
+    // Rechte Seite: System-Tray / Status-Module
+    Row {
+        anchors {
+            right: parent.right
+            rightMargin: 16
+            verticalCenter: parent.verticalCenter
+        }
+        spacing: 16
+
+        // Akku
+        Text {
+            text: niriReader.batteryPercent + "%"
+            color: "#a6e3a1" // Grün
+            font.pixelSize: 14
+            font.bold: true
+        }
+
+        // Die Uhrzeit
+        Text {
+            id: clockText
+            color: "#cdd6f4"
+            font.pixelSize: 14
+            font.bold: true
+
+            // Ein Timer, der jede Sekunde triggert und die Zeit aktualisiert
+            Timer {
+                interval: 1000 // 1 Sekunde
+                running: true
+                repeat: true
+                // Wenn das UI startet, sofort einmal ausführen, damit nicht "00:00" dasteht
+                triggeredOnStart: true 
+                onTriggered: {
+                    // JavaScript Date-Objekt formatieren
+                    clockText.text = new Date().toLocaleTimeString(Qt.locale(), "HH:mm:ss")
+                }
+            }
+        }
+    }
 }

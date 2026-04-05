@@ -100,10 +100,14 @@ inline ::flatbuffers::Offset<Workspace> CreateWorkspaceDirect(
 struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef ShellStateBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_WORKSPACES = 4
+    VT_WORKSPACES = 4,
+    VT_BATTERY_PERCENT = 6
   };
   const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *>(VT_WORKSPACES);
+  }
+  int8_t battery_percent() const {
+    return GetField<int8_t>(VT_BATTERY_PERCENT, 0);
   }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
@@ -111,6 +115,7 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyOffset(verifier, VT_WORKSPACES) &&
            verifier.VerifyVector(workspaces()) &&
            verifier.VerifyVectorOfTables(workspaces()) &&
+           VerifyField<int8_t>(verifier, VT_BATTERY_PERCENT, 1) &&
            verifier.EndTable();
   }
 };
@@ -121,6 +126,9 @@ struct ShellStateBuilder {
   ::flatbuffers::uoffset_t start_;
   void add_workspaces(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>>> workspaces) {
     fbb_.AddOffset(ShellState::VT_WORKSPACES, workspaces);
+  }
+  void add_battery_percent(int8_t battery_percent) {
+    fbb_.AddElement<int8_t>(ShellState::VT_BATTERY_PERCENT, battery_percent, 0);
   }
   explicit ShellStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -135,19 +143,23 @@ struct ShellStateBuilder {
 
 inline ::flatbuffers::Offset<ShellState> CreateShellState(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>>> workspaces = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>>> workspaces = 0,
+    int8_t battery_percent = 0) {
   ShellStateBuilder builder_(_fbb);
   builder_.add_workspaces(workspaces);
+  builder_.add_battery_percent(battery_percent);
   return builder_.Finish();
 }
 
 inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    const std::vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces = nullptr) {
+    const std::vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces = nullptr,
+    int8_t battery_percent = 0) {
   auto workspaces__ = workspaces ? _fbb.CreateVector<::flatbuffers::Offset<NiriShell::Workspace>>(*workspaces) : 0;
   return NiriShell::CreateShellState(
       _fbb,
-      workspaces__);
+      workspaces__,
+      battery_percent);
 }
 
 inline const NiriShell::ShellState *GetShellState(const void *buf) {
