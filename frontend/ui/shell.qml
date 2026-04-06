@@ -1,139 +1,205 @@
 import QtQuick
+import QtQuick.Controls
 import Quickshell
 import NiriState 1.0
-import QtQuick.Controls
+import "."
+// HINWEIS: Falls du hier noch einen speziellen Import für dein C++ Plugin hattest 
+// (z.B. "import NiriState"), füge ihn hier oben wieder ein!
 
 PanelWindow {
     id: root
+    anchors { top: true; left: true; right: true }
+    
+    implicitHeight: Theme.barHeight
+    color: Theme.bg
 
-    // --- HIER IST DIE MAGIE GEGEN DAS QUADRAT ---
-    // Wir verankern das Fenster fest oben, links und rechts am Monitor.
-    anchors {
-        top: true
-        left: true
-        right: true
-    }
+    SocketReader { id: niriReader }
 
-    // Wir sagen Wayland, dass die Leiste exakt 40 Pixel hoch sein soll.
-    implicitHeight: 40
-
-    // Eine Hintergrundfarbe für die Leiste
-    color: "#1e1e2e"
-
-    SocketReader {
-        id: niriReader
-    }
-
-    // Ein Container-Item, das die ganze Leiste ausfüllt
     Item {
         anchors.fill: parent
 
-        // 📍 LINKS: Navigation (Workspaces)
+        // ==========================================
+        // 📍 LINKS: Navigation (Menü & Workspaces)
+        // ==========================================
         Row {
-            anchors {
-                left: parent.left
-                leftMargin: 16
-                verticalCenter: parent.verticalCenter
-            }
+            anchors { left: parent.left; leftMargin: Theme.margin; verticalCenter: parent.verticalCenter }
             spacing: 8
 
+            // Der Hub-Button (ohne Popup, nur Klick-Erkennung)
             Rectangle {
-                width: 36
-                height: 28
-                radius: 6
-                // Hover-Effekt: Wird beim Überfahren blau
-                color: menuMouseArea.containsMouse ? "#89b4fa" : "#313244"
+                width: 36; height: 28; radius: Theme.radius
+                color: menuMouseArea.containsMouse || controlCenterPopup.visible ? Theme.primary : Theme.bgHover
+                Behavior on color { ColorAnimation { duration: Theme.animDuration } }
 
                 Text {
                     anchors.centerIn: parent
-                    //  ist das NixOS-Logo in Nerd Fonts. 
-                    // Falls du ein Kästchen siehst, ändere es vorerst in "❄️"
                     text: "" 
-                    font.pixelSize: 16
-                    color: menuMouseArea.containsMouse ? "#1e1e2e" : "#89b4fa"
+                    font.pixelSize: Theme.iconSize
+                    color: menuMouseArea.containsMouse || controlCenterPopup.visible ? Theme.textDark : Theme.primary
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
 
                 MouseArea {
                     id: menuMouseArea
                     anchors.fill: parent
-                    hoverEnabled: true // Aktiviert den Hover-Effekt
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        //console.log("Hauptmenü geklickt!")
-                        niriReader.launchMenu()
-                    }
+                    // Öffnet das Popup in der Mitte!
+                    onClicked: controlCenterPopup.visible = !controlCenterPopup.visible
                 }
             }
 
+            // Workspaces
             Repeater {
                 model: niriReader.workspaces
 
                 Rectangle {
-                    width: 120
-                    implicitHeight: 28
-                    radius: 6
-                    color: modelData.is_active ? "#89b4fa" : "#313244"
+                    width: 120; height: 28; radius: Theme.radius
+                    color: modelData.is_active ? Theme.primary : Theme.bgHover
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
 
                     Text {
                         anchors.centerIn: parent
                         text: modelData.name
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.fontSize
                         font.bold: modelData.is_active
-                        color: modelData.is_active ? "#1e1e2e" : "#cdd6f4"
+                        color: modelData.is_active ? Theme.textDark : Theme.text
+                        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            niriReader.focusWorkspace(modelData.id)
+                        onClicked: niriReader.focusWorkspace(modelData.id)
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 📍 MITTE: Aktiver Fenster-Titel & Control Center
+        // ==========================================
+        Text {
+            anchors.centerIn: parent
+            text: niriReader.activeWindowTitle !== "" ? niriReader.activeWindowTitle : "Niri Desktop"
+            color: Theme.text
+            font.pixelSize: 15
+            font.bold: true
+            width: Math.min(implicitWidth, parent.width / 2.5)
+            elide: Text.ElideRight
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        PopupWindow {
+            id: controlCenterPopup
+            visible: false
+            
+            anchor.window: root
+            anchor.rect.x: (root.width - width) / 2
+            anchor.rect.y: Theme.barHeight 
+            
+            width: 300
+            height: 200
+            color: "transparent"
+
+            Rectangle {
+                anchors.fill: parent
+                color: Theme.bg
+                radius: Theme.radius
+                border.color: Theme.bgHover
+                border.width: 1
+
+                Rectangle {
+                    anchors { top: parent.top; left: parent.left; right: parent.right }
+                    height: Theme.radius
+                    color: Theme.bg
+                }
+
+                Column {
+                    anchors { fill: parent; margins: 12 }
+                    spacing: 8
+
+                    Text {
+                        text: "Control Center"
+                        color: Theme.text
+                        font.pixelSize: Theme.fontSize
+                        font.bold: true
+                        padding: 4
+                    }
+
+                    Rectangle { width: parent.width; height: 1; color: Theme.bgHover } 
+
+                    // Button 1: App Launcher
+                    Rectangle {
+                        width: parent.width; height: 40; radius: Theme.radius
+                        color: launcherMouseArea.containsMouse ? Theme.bgHover : "transparent"
+                        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+
+                        Text {
+                            anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
+                            text: "🚀  App Launcher"
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSize
+                        }
+
+                        MouseArea {
+                            id: launcherMouseArea
+                            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                niriReader.launchMenu();
+                                controlCenterPopup.visible = false; 
+                            }
+                        }
+                    }
+
+                    // Button 2: Theme Engine
+                    Rectangle {
+                        width: parent.width; height: 40; radius: Theme.radius
+                        color: themeMouseArea.containsMouse ? Theme.bgHover : "transparent"
+                        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+
+                        Text {
+                            anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
+                            text: "🎨  Theme Engine"
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSize
+                        }
+
+                        MouseArea {
+                            id: themeMouseArea
+                            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                console.log("Theme Engine clicked!");
+                                controlCenterPopup.visible = false;
+                            }
                         }
                     }
                 }
             }
         }
 
-        // 📍 MITTE: Aktiver Fenster-Titel
-        Text {
-            anchors.centerIn: parent
-            // Fallback-Text, wenn kein Fenster offen ist
-            text: niriReader.activeWindowTitle !== "" ? niriReader.activeWindowTitle : "Niri Desktop"
-            color: "#cdd6f4"
-            font.pixelSize: 15
-            font.bold: true
-
-            // Sehr wichtig: Verhindert, dass ultralange Titel (z.B. YouTube) die Leiste sprengen!
-            width: Math.min(implicitWidth, parent.width / 2.5)
-            elide: Text.ElideRight
-            horizontalAlignment: Text.AlignHCenter
-        }
-
+        // ==========================================
         // 📍 RECHTS: System & Metriken
+        // ==========================================
         Row {
-            anchors {
-                right: parent.right
-                rightMargin: 16
-                verticalCenter: parent.verticalCenter
-            }
+            anchors { right: parent.right; rightMargin: Theme.margin; verticalCenter: parent.verticalCenter }
             spacing: 16
 
-            // --- NEU: Netzwerk/WLAN ---
             Text {
                 text: niriReader.networkName === "Offline" ? "⚠️ Offline" : "📶 " + niriReader.networkName
-                color: niriReader.networkName === "Offline" ? "#f38ba8" : "#cdd6f4"
-                font.pixelSize: 14
+                color: niriReader.networkName === "Offline" ? Theme.error : Theme.text
+                font.pixelSize: Theme.fontSize
                 font.bold: true
+                Behavior on color { ColorAnimation { duration: Theme.animDuration } }
             }
 
-            // --- Audio ---
             Text {
-                // Zeigt 🔇 wenn stummgeschaltet, sonst 🔊
                 text: (niriReader.audioMuted ? "🔇 " : "🔊 ") + niriReader.audioVolume + "%"
-                // Rot bei Stummschaltung, Blau im Normalbetrieb
-                color: niriReader.audioMuted ? "#f38ba8" : "#89b4fa"
-                font.pixelSize: 14
+                color: niriReader.audioMuted ? Theme.error : Theme.primary
+                font.pixelSize: Theme.fontSize
                 font.bold: true
-                
+                Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
@@ -143,58 +209,56 @@ PanelWindow {
 
             Text {
                 text: "🔋 " + niriReader.batteryPercent + "%"
-                color: "#a6e3a1"
-                font.pixelSize: 14
+                color: Theme.success
+                font.pixelSize: Theme.fontSize
                 font.bold: true
             }
 
+            // Uhrzeit & Kalender Popup
             Text {
                 id: clockText
-                color: "#cdd6f4"
-                font.pixelSize: 14
+                color: Theme.text
+                font.pixelSize: Theme.fontSize
                 font.bold: true
 
                 Timer {
-                    interval: 1000
-                    running: true
-                    repeat: true
-                    triggeredOnStart: true 
+                    interval: 1000; running: true; repeat: true; triggeredOnStart: true 
                     onTriggered: clockText.text = new Date().toLocaleTimeString(Qt.locale(), "HH:mm:ss")
                 }
 
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: calendarPopup.opened ? calendarPopup.close() : calendarPopup.open()
+                    onClicked: calendarPopup.visible = !calendarPopup.visible
                 }
 
-                // Das Kalender-Popup
-                Popup {
+                PopupWindow {
                     id: calendarPopup
-                    // Positionierung: Unterhalb der Leiste, rechtsbündig
-                    y: 30 
-                    x: -150 
+                    visible: false
+                    
+                    anchor.window: root
+                    anchor.rect.x: root.width - width - Theme.margin
+                    anchor.rect.y: Theme.barHeight + 8 
+                    
                     width: 220
-                    height: 250
-                    background: Rectangle {
-                        color: "#1e1e2e"
-                        radius: 8
-                        border.color: "#313244"
-                        border.width: 1
-                    }
+                    height: 100 
+                    color: "transparent"
 
-                    // Ein simpler nativer Kalender
-                    // (Falls dein Qt-Setup DayOfWeekRow etc. vermisst, tut es für den Anfang auch ein Platzhalter-Text)
-                    contentItem: Item {
+                    Rectangle {
+                        anchors.fill: parent
+                        color: Theme.bg
+                        radius: Theme.radius
+                        border.color: Theme.bgHover
+                        border.width: 1
+
                         Text {
-                            anchors.top: parent.top
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: new Date().toLocaleDateString(Qt.locale(), "dddd, d. MMMM yyyy")
-                            color: "#cdd6f4"
+                            anchors.centerIn: parent
+                            text: new Date().toLocaleDateString(Qt.locale(), "dddd,\nd. MMMM yyyy")
+                            color: Theme.text
                             font.bold: true
-                            font.pixelSize: 14
+                            font.pixelSize: Theme.fontSize
+                            horizontalAlignment: Text.AlignHCenter
                         }
-                        // Hier könnten wir später einen echten MonthGrid() einfügen!
                     }
                 }
             }
