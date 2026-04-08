@@ -13,7 +13,7 @@ PanelWindow {
     implicitHeight: Theme.barHeight
     color: Theme.bg
 
-    SocketReader {
+    ShellStateStore {
         id: niriReader
         onToggleCcSignalChanged: {
             controlCenterPopup.visible = !controlCenterPopup.visible
@@ -103,8 +103,8 @@ PanelWindow {
             anchor.rect.x: (root.width - width) / 2
             anchor.rect.y: Theme.barHeight 
             
-            width: 300
-            height: 200
+            implicitWidth: 300
+            implicitHeight: 200
             color: "transparent"
 
             Rectangle {
@@ -245,8 +245,8 @@ PanelWindow {
                     anchor.rect.x: root.width - width - Theme.margin
                     anchor.rect.y: Theme.barHeight + 8 
                     
-                    width: 220
-                    height: 100 
+                    implicitWidth: 220
+                    implicitHeight: 100 
                     color: "transparent"
 
                     Rectangle {

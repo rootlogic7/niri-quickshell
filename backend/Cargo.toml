@@ -10,3 +10,4 @@ serde_json = "1.0"
 flatbuffers = "25.12.19" # Kompatibel mit der flatc-Version aus Nixpkgs
 zbus = "5.0"
 futures-lite = "2.6"
+libc = "0.2.184"

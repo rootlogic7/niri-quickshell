@@ -18,8 +18,10 @@ qt6_add_qml_module(NiriStatePlugin
     VERSION 1.0
     OUTPUT_DIRECTORY NiriState
     SOURCES
-        plugin/SocketReader.cpp
-        plugin/SocketReader.h
+        plugin/IpcClient.cpp
+        plugin/IpcClient.h
+        plugin/ShellStateStore.cpp
+        plugin/ShellStateStore.h
 )
 
 # DER FIX FÜR DEN ERROR: Wir sagen dem Compiler explizit, wo unsere Header liegen!
