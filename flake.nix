@@ -22,6 +22,8 @@
         # Nimm das komplette aktuelle Git-Verzeichnis als Quelle
         src = ./.;
 
+        cmakeDir = "../frontend";
+
         # Sag CMake, dass die Haupt-Konfiguration im Ordner 'frontend' liegt
         cmakeFlags = [ "-S" "frontend" ];
 
