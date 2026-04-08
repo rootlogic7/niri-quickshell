@@ -24,9 +24,6 @@
 
         cmakeDir = "../frontend";
 
-        # Sag CMake, dass die Haupt-Konfiguration im Ordner 'frontend' liegt
-        cmakeFlags = [ "-S" "frontend" ];
-
         cargoRoot = "backend";
 
         # RUST OFFLINE-ZUGRIFF: Nix liest die Lock-Datei und lädt alle Crates vorab!
