@@ -24,6 +24,8 @@
 
         cmakeDir = "../frontend";
 
+        cmakeFlags = [ "-DCMAKE_SKIP_BUILD_RPATH=ON" ];
+
         cargoRoot = "backend";
 
         # RUST OFFLINE-ZUGRIFF: Nix liest die Lock-Datei und lädt alle Crates vorab!
