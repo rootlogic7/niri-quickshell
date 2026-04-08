@@ -12,6 +12,7 @@ use crate::ipc::{Event, get_socket_path};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    crate::modules::theme::init_watcher();
     let args: Vec<String> = std::env::args().collect();
     
     // Holen uns jetzt die sicheren ~/.config oder /run/user Pfade!

@@ -44,14 +44,15 @@ where
     let net_name_fb = builder.create_string(&net_name);
 
     // ==========================================
-    // NEU: Theme verarbeiten
+    // LIVE-THEME LADEN
     // ==========================================
-    // Wir legen die Strings im Speicher an
-    let bg_color = builder.create_string("#1e1e2e");
-    let fg_color = builder.create_string("#cdd6f4");
-    let accent_color = builder.create_string("#cba6f7");
+    // Wir holen uns das frisch geladene Theme aus dem Arbeitsspeicher
+    let current_theme = crate::modules::theme::get_theme();
 
-    // Wir bauen das Theme-Objekt
+    let bg_color = builder.create_string(&current_theme.bg_color);
+    let fg_color = builder.create_string(&current_theme.fg_color);
+    let accent_color = builder.create_string(&current_theme.accent_color);
+
     let theme_offset = Theme::create(&mut builder, &ThemeArgs {
         bg_color: Some(bg_color),
         fg_color: Some(fg_color),
