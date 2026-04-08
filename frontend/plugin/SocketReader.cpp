@@ -135,6 +135,13 @@ void SocketReader::onReadyRead() {
             m_networkName = newNet;
             emit networkNameChanged();
         }
+
+        // --- Control Center toggle ---
+        int new_cc_signal = shellState->toggle_cc_signal();
+        if (m_toggleCcSignal != new_cc_signal) {
+            m_toggleCcSignal = new_cc_signal;
+            emit toggleCcSignalChanged();
+        }
     }
 }
 

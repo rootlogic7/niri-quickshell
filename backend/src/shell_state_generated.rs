@@ -159,6 +159,7 @@ impl<'a> ShellState<'a> {
   pub const VT_AUDIO_VOLUME: ::flatbuffers::VOffsetT = 10;
   pub const VT_AUDIO_MUTED: ::flatbuffers::VOffsetT = 12;
   pub const VT_NETWORK_NAME: ::flatbuffers::VOffsetT = 14;
+  pub const VT_TOGGLE_CC_SIGNAL: ::flatbuffers::VOffsetT = 16;
 
   #[inline]
   pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -173,6 +174,7 @@ impl<'a> ShellState<'a> {
     if let Some(x) = args.network_name { builder.add_network_name(x); }
     if let Some(x) = args.active_window_title { builder.add_active_window_title(x); }
     if let Some(x) = args.workspaces { builder.add_workspaces(x); }
+    builder.add_toggle_cc_signal(args.toggle_cc_signal);
     builder.add_audio_muted(args.audio_muted);
     builder.add_audio_volume(args.audio_volume);
     builder.add_battery_percent(args.battery_percent);
@@ -222,6 +224,13 @@ impl<'a> ShellState<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(ShellState::VT_NETWORK_NAME, None)}
   }
+  #[inline]
+  pub fn toggle_cc_signal(&self) -> u8 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u8>(ShellState::VT_TOGGLE_CC_SIGNAL, Some(0)).unwrap()}
+  }
 }
 
 impl ::flatbuffers::Verifiable for ShellState<'_> {
@@ -236,6 +245,7 @@ impl ::flatbuffers::Verifiable for ShellState<'_> {
      .visit_field::<i8>("audio_volume", Self::VT_AUDIO_VOLUME, false)?
      .visit_field::<bool>("audio_muted", Self::VT_AUDIO_MUTED, false)?
      .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("network_name", Self::VT_NETWORK_NAME, false)?
+     .visit_field::<u8>("toggle_cc_signal", Self::VT_TOGGLE_CC_SIGNAL, false)?
      .finish();
     Ok(())
   }
@@ -247,6 +257,7 @@ pub struct ShellStateArgs<'a> {
     pub audio_volume: i8,
     pub audio_muted: bool,
     pub network_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub toggle_cc_signal: u8,
 }
 impl<'a> Default for ShellStateArgs<'a> {
   #[inline]
@@ -258,6 +269,7 @@ impl<'a> Default for ShellStateArgs<'a> {
       audio_volume: 0,
       audio_muted: false,
       network_name: None,
+      toggle_cc_signal: 0,
     }
   }
 }
@@ -292,6 +304,10 @@ impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ShellStateBuilder<'a, 'b, A> 
     self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(ShellState::VT_NETWORK_NAME, network_name);
   }
   #[inline]
+  pub fn add_toggle_cc_signal(&mut self, toggle_cc_signal: u8) {
+    self.fbb_.push_slot::<u8>(ShellState::VT_TOGGLE_CC_SIGNAL, toggle_cc_signal, 0);
+  }
+  #[inline]
   pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ShellStateBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     ShellStateBuilder {
@@ -315,6 +331,7 @@ impl ::core::fmt::Debug for ShellState<'_> {
       ds.field("audio_volume", &self.audio_volume());
       ds.field("audio_muted", &self.audio_muted());
       ds.field("network_name", &self.network_name());
+      ds.field("toggle_cc_signal", &self.toggle_cc_signal());
       ds.finish()
   }
 }

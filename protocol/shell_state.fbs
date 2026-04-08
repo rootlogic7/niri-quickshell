@@ -15,6 +15,8 @@ table ShellState {
   audio_volume: int8;
   audio_muted: bool;
   network_name: string;
+
+  toggle_cc_signal: ubyte;
 }
 
 root_type ShellState;

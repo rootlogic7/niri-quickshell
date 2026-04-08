@@ -105,7 +105,8 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_ACTIVE_WINDOW_TITLE = 8,
     VT_AUDIO_VOLUME = 10,
     VT_AUDIO_MUTED = 12,
-    VT_NETWORK_NAME = 14
+    VT_NETWORK_NAME = 14,
+    VT_TOGGLE_CC_SIGNAL = 16
   };
   const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *>(VT_WORKSPACES);
@@ -125,6 +126,9 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::String *network_name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NETWORK_NAME);
   }
+  uint8_t toggle_cc_signal() const {
+    return GetField<uint8_t>(VT_TOGGLE_CC_SIGNAL, 0);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -138,6 +142,7 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint8_t>(verifier, VT_AUDIO_MUTED, 1) &&
            VerifyOffset(verifier, VT_NETWORK_NAME) &&
            verifier.VerifyString(network_name()) &&
+           VerifyField<uint8_t>(verifier, VT_TOGGLE_CC_SIGNAL, 1) &&
            verifier.EndTable();
   }
 };
@@ -164,6 +169,9 @@ struct ShellStateBuilder {
   void add_network_name(::flatbuffers::Offset<::flatbuffers::String> network_name) {
     fbb_.AddOffset(ShellState::VT_NETWORK_NAME, network_name);
   }
+  void add_toggle_cc_signal(uint8_t toggle_cc_signal) {
+    fbb_.AddElement<uint8_t>(ShellState::VT_TOGGLE_CC_SIGNAL, toggle_cc_signal, 0);
+  }
   explicit ShellStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -182,11 +190,13 @@ inline ::flatbuffers::Offset<ShellState> CreateShellState(
     ::flatbuffers::Offset<::flatbuffers::String> active_window_title = 0,
     int8_t audio_volume = 0,
     bool audio_muted = false,
-    ::flatbuffers::Offset<::flatbuffers::String> network_name = 0) {
+    ::flatbuffers::Offset<::flatbuffers::String> network_name = 0,
+    uint8_t toggle_cc_signal = 0) {
   ShellStateBuilder builder_(_fbb);
   builder_.add_network_name(network_name);
   builder_.add_active_window_title(active_window_title);
   builder_.add_workspaces(workspaces);
+  builder_.add_toggle_cc_signal(toggle_cc_signal);
   builder_.add_audio_muted(audio_muted);
   builder_.add_audio_volume(audio_volume);
   builder_.add_battery_percent(battery_percent);
@@ -200,7 +210,8 @@ inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
     const char *active_window_title = nullptr,
     int8_t audio_volume = 0,
     bool audio_muted = false,
-    const char *network_name = nullptr) {
+    const char *network_name = nullptr,
+    uint8_t toggle_cc_signal = 0) {
   auto workspaces__ = workspaces ? _fbb.CreateVector<::flatbuffers::Offset<NiriShell::Workspace>>(*workspaces) : 0;
   auto active_window_title__ = active_window_title ? _fbb.CreateString(active_window_title) : 0;
   auto network_name__ = network_name ? _fbb.CreateString(network_name) : 0;
@@ -211,7 +222,8 @@ inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
       active_window_title__,
       audio_volume,
       audio_muted,
-      network_name__);
+      network_name__,
+      toggle_cc_signal);
 }
 
 inline const NiriShell::ShellState *GetShellState(const void *buf) {

@@ -18,6 +18,7 @@ class SocketReader : public QObject {
     Q_PROPERTY(int audioVolume READ audioVolume NOTIFY audioVolumeChanged) // NEU
     Q_PROPERTY(bool audioMuted READ audioMuted NOTIFY audioMutedChanged)
     Q_PROPERTY(QString networkName READ networkName NOTIFY networkNameChanged)
+    Q_PROPERTY(int toggleCcSignal READ toggleCcSignal NOTIFY toggleCcSignalChanged)
 
 public:
     explicit SocketReader(QObject *parent = nullptr);
@@ -30,6 +31,7 @@ public:
     int audioVolume() const;
     bool audioMuted() const;
     QString networkName() const;
+    int toggleCcSignal() const { return m_toggleCcSignal; }
 
 signals:
     void workspacesChanged();
@@ -38,6 +40,7 @@ signals:
     void audioVolumeChanged();
     void audioMutedChanged();
     void networkNameChanged();
+    void toggleCcSignalChanged();
 
 private slots:
     void onReadyRead();
@@ -56,4 +59,5 @@ private:
     int m_audioVolume = 0;
     bool m_audioMuted = false;
     QString m_networkName = "Offline";
+    int m_toggleCcSignal = 0;
 };

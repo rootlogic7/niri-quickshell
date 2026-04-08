@@ -13,7 +13,12 @@ PanelWindow {
     implicitHeight: Theme.barHeight
     color: Theme.bg
 
-    SocketReader { id: niriReader }
+    SocketReader {
+        id: niriReader
+        onToggleCcSignalChanged: {
+            controlCenterPopup.visible = !controlCenterPopup.visible
+        }
+    }
 
     Item {
         anchors.fill: parent
