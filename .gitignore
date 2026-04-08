@@ -15,3 +15,6 @@ frontend/CMakeLists.txt.user
 .idea/
 *.swp
 .DS_Store
+
+# Tests
+install_test/
