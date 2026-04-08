@@ -15,6 +15,9 @@ class ShellStateStore : public QObject {
     Q_PROPERTY(bool audioMuted READ audioMuted NOTIFY audioMutedChanged)
     Q_PROPERTY(QString networkName READ networkName NOTIFY networkNameChanged)
     Q_PROPERTY(int toggleCcSignal READ toggleCcSignal NOTIFY toggleCcSignalChanged)
+    Q_PROPERTY(QString themeBackground READ themeBackground NOTIFY themeChanged)
+    Q_PROPERTY(QString themeForeground READ themeForeground NOTIFY themeChanged)
+    Q_PROPERTY(QString themeAccent READ themeAccent NOTIFY themeChanged)
 
 public:
     explicit ShellStateStore(QObject *parent = nullptr);
@@ -31,6 +34,10 @@ public:
     Q_INVOKABLE void launchMenu();
     Q_INVOKABLE void toggleAudioMute();
 
+    QString themeBackground() const { return m_themeBackground; }
+    QString themeForeground() const { return m_themeForeground; }
+    QString themeAccent() const { return m_themeAccent; }
+
 signals:
     void workspacesChanged();
     void activeWindowTitleChanged();
@@ -39,6 +46,7 @@ signals:
     void audioMutedChanged();
     void networkNameChanged();
     void toggleCcSignalChanged();
+    void themeChanged();
 
 private slots:
     void processPacket(const QByteArray &packet);
@@ -53,4 +61,8 @@ private:
     bool m_audioMuted = false;
     QString m_networkName = "Offline";
     int m_toggleCcSignal = 0;
+
+    QString m_themeBackground = "#000000"; 
+    QString m_themeForeground = "#ffffff";
+    QString m_themeAccent = "#ffffff";
 };

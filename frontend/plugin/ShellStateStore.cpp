@@ -9,7 +9,6 @@ ShellStateStore::ShellStateStore(QObject *parent) : QObject(parent), m_ipcClient
     connect(m_ipcClient, &IpcClient::messageReceived, this, &ShellStateStore::processPacket);
 }
 
-// ... [Getter-Methoden hier einfügen, exakt wie im alten SocketReader] ...
 QVariantList ShellStateStore::workspaces() const { return m_workspaces; }
 QString ShellStateStore::activeWindowTitle() const { return m_activeWindowTitle; }
 int ShellStateStore::batteryPercent() const { return m_batteryPercent; }
@@ -68,6 +67,50 @@ void ShellStateStore::processPacket(const QByteArray &packet) {
 
     int new_cc_signal = shellState->toggle_cc_signal();
     if (m_toggleCcSignal != new_cc_signal) { m_toggleCcSignal = new_cc_signal; emit toggleCcSignalChanged(); }
+
+    // ==========================================
+    // NEU: Das Theme auslesen
+    // ==========================================
+    auto theme = shellState->theme();
+    if (theme) {
+        bool colorsChanged = false;
+
+        // Hintergrundfarbe
+        auto bg_fb = theme->bg_color();
+        if (bg_fb) {
+            QString newBg = QString::fromStdString(bg_fb->str());
+            if (m_themeBackground != newBg) {
+                m_themeBackground = newBg;
+                colorsChanged = true;
+            }
+        }
+        
+        // Textfarbe
+        auto fg_fb = theme->fg_color();
+        if (fg_fb) {
+            QString newFg = QString::fromStdString(fg_fb->str());
+            if (m_themeForeground != newFg) {
+                m_themeForeground = newFg;
+                colorsChanged = true;
+            }
+        }
+        
+        // Akzentfarbe
+        auto accent_fb = theme->accent_color();
+        if (accent_fb) {
+            QString newAccent = QString::fromStdString(accent_fb->str());
+            if (m_themeAccent != newAccent) {
+                m_themeAccent = newAccent;
+                colorsChanged = true;
+            }
+        }
+
+        // QML nur benachrichtigen, wenn sich wirklich eine Farbe geändert hat!
+        if (colorsChanged) {
+            emit themeChanged();
+        }
+    }
+    // ==========================================
 }
 
 void ShellStateStore::focusWorkspace(int id) {

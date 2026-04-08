@@ -27,6 +27,19 @@ find_package(Qt6 REQUIRED COMPONENTS Core Network Qml Quick)
 # FIX: Die Qt-Policy wird mit 'qt_policy' NACH find_package gesetzt!
 qt_policy(SET QTP0001 NEW)
 
+# ==========================================
+# AUTOMATISCHE FLATBUFFER GENERIERUNG
+# ==========================================
+set(FBS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../protocol/shell_state.fbs")
+set(FBS_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/plugin")
+
+add_custom_command(
+    OUTPUT ${FBS_OUT_DIR}/shell_state_generated.h
+    COMMAND flatc --cpp -o ${FBS_OUT_DIR}/ ${FBS_FILE}
+    DEPENDS ${FBS_FILE}
+    COMMENT "Generiere C++ FlatBuffer Header..."
+)
+
 qt6_add_qml_module(NiriStatePlugin
     URI NiriState
     VERSION 1.0
@@ -36,6 +49,7 @@ qt6_add_qml_module(NiriStatePlugin
         plugin/IpcClient.h
         plugin/ShellStateStore.cpp
         plugin/ShellStateStore.h
+        plugin/shell_state_generated.h
 )
 
 target_include_directories(NiriStatePlugin PRIVATE 

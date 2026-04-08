@@ -2,6 +2,13 @@
 
 namespace NiriShell;
 
+// NEU: Unsere Theme-Definition
+table Theme {
+  bg_color: string;
+  fg_color: string;
+  accent_color: string;
+}
+
 table Workspace {
   id: uint64;
   name: string;
@@ -17,6 +24,9 @@ table ShellState {
   network_name: string;
 
   toggle_cc_signal: ubyte;
+
+  // NEU: Das Theme wird bei jedem State-Update mitgeschickt
+  theme: Theme;
 }
 
 root_type ShellState;

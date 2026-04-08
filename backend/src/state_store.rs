@@ -1,4 +1,7 @@
-use crate::shell_state_generated::niri_shell::{ShellState, ShellStateArgs, Workspace, WorkspaceArgs};
+// NEU: Wir müssen Theme und ThemeArgs importieren
+use crate::shell_state_generated::niri_shell::{
+    ShellState, ShellStateArgs, Workspace, WorkspaceArgs, Theme, ThemeArgs
+};
 use flatbuffers::FlatBufferBuilder;
 use tokio::io::AsyncWriteExt;
 use crate::modules::{niri, audio, network, battery};
@@ -40,6 +43,22 @@ where
     let net_name = network::get_network_name(dbus_conn).await;
     let net_name_fb = builder.create_string(&net_name);
 
+    // ==========================================
+    // NEU: Theme verarbeiten
+    // ==========================================
+    // Wir legen die Strings im Speicher an
+    let bg_color = builder.create_string("#1e1e2e");
+    let fg_color = builder.create_string("#cdd6f4");
+    let accent_color = builder.create_string("#cba6f7");
+
+    // Wir bauen das Theme-Objekt
+    let theme_offset = Theme::create(&mut builder, &ThemeArgs {
+        bg_color: Some(bg_color),
+        fg_color: Some(fg_color),
+        accent_color: Some(accent_color),
+    });
+    // ==========================================
+
     // -- Finales ShellState Objekt bauen --
     let shell_state = ShellState::create(&mut builder, &ShellStateArgs {
         workspaces: Some(workspaces_vec),
@@ -49,6 +68,9 @@ where
         audio_muted: muted,
         network_name: Some(net_name_fb),
         toggle_cc_signal: cc_counter,
+        
+        // NEU: Das Theme in den Haupt-State einhängen
+        theme: Some(theme_offset),
     });
 
     builder.finish_size_prefixed(shell_state, None);

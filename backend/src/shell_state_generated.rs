@@ -7,6 +7,136 @@ extern crate alloc;
 pub mod niri_shell {
 
 
+pub enum ThemeOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct Theme<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for Theme<'a> {
+  type Inner = Theme<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> Theme<'a> {
+  pub const VT_BG_COLOR: ::flatbuffers::VOffsetT = 4;
+  pub const VT_FG_COLOR: ::flatbuffers::VOffsetT = 6;
+  pub const VT_ACCENT_COLOR: ::flatbuffers::VOffsetT = 8;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    Theme { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args ThemeArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<Theme<'bldr>> {
+    let mut builder = ThemeBuilder::new(_fbb);
+    if let Some(x) = args.accent_color { builder.add_accent_color(x); }
+    if let Some(x) = args.fg_color { builder.add_fg_color(x); }
+    if let Some(x) = args.bg_color { builder.add_bg_color(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn bg_color(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(Theme::VT_BG_COLOR, None)}
+  }
+  #[inline]
+  pub fn fg_color(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(Theme::VT_FG_COLOR, None)}
+  }
+  #[inline]
+  pub fn accent_color(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(Theme::VT_ACCENT_COLOR, None)}
+  }
+}
+
+impl ::flatbuffers::Verifiable for Theme<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("bg_color", Self::VT_BG_COLOR, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("fg_color", Self::VT_FG_COLOR, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("accent_color", Self::VT_ACCENT_COLOR, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct ThemeArgs<'a> {
+    pub bg_color: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub fg_color: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub accent_color: Option<::flatbuffers::WIPOffset<&'a str>>,
+}
+impl<'a> Default for ThemeArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    ThemeArgs {
+      bg_color: None,
+      fg_color: None,
+      accent_color: None,
+    }
+  }
+}
+
+pub struct ThemeBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ThemeBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_bg_color(&mut self, bg_color: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(Theme::VT_BG_COLOR, bg_color);
+  }
+  #[inline]
+  pub fn add_fg_color(&mut self, fg_color: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(Theme::VT_FG_COLOR, fg_color);
+  }
+  #[inline]
+  pub fn add_accent_color(&mut self, accent_color: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(Theme::VT_ACCENT_COLOR, accent_color);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ThemeBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    ThemeBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<Theme<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for Theme<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("Theme");
+      ds.field("bg_color", &self.bg_color());
+      ds.field("fg_color", &self.fg_color());
+      ds.field("accent_color", &self.accent_color());
+      ds.finish()
+  }
+}
 pub enum WorkspaceOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -160,6 +290,7 @@ impl<'a> ShellState<'a> {
   pub const VT_AUDIO_MUTED: ::flatbuffers::VOffsetT = 12;
   pub const VT_NETWORK_NAME: ::flatbuffers::VOffsetT = 14;
   pub const VT_TOGGLE_CC_SIGNAL: ::flatbuffers::VOffsetT = 16;
+  pub const VT_THEME: ::flatbuffers::VOffsetT = 18;
 
   #[inline]
   pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -171,6 +302,7 @@ impl<'a> ShellState<'a> {
     args: &'args ShellStateArgs<'args>
   ) -> ::flatbuffers::WIPOffset<ShellState<'bldr>> {
     let mut builder = ShellStateBuilder::new(_fbb);
+    if let Some(x) = args.theme { builder.add_theme(x); }
     if let Some(x) = args.network_name { builder.add_network_name(x); }
     if let Some(x) = args.active_window_title { builder.add_active_window_title(x); }
     if let Some(x) = args.workspaces { builder.add_workspaces(x); }
@@ -231,6 +363,13 @@ impl<'a> ShellState<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<u8>(ShellState::VT_TOGGLE_CC_SIGNAL, Some(0)).unwrap()}
   }
+  #[inline]
+  pub fn theme(&self) -> Option<Theme<'a>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<Theme>>(ShellState::VT_THEME, None)}
+  }
 }
 
 impl ::flatbuffers::Verifiable for ShellState<'_> {
@@ -246,6 +385,7 @@ impl ::flatbuffers::Verifiable for ShellState<'_> {
      .visit_field::<bool>("audio_muted", Self::VT_AUDIO_MUTED, false)?
      .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("network_name", Self::VT_NETWORK_NAME, false)?
      .visit_field::<u8>("toggle_cc_signal", Self::VT_TOGGLE_CC_SIGNAL, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<Theme>>("theme", Self::VT_THEME, false)?
      .finish();
     Ok(())
   }
@@ -258,6 +398,7 @@ pub struct ShellStateArgs<'a> {
     pub audio_muted: bool,
     pub network_name: Option<::flatbuffers::WIPOffset<&'a str>>,
     pub toggle_cc_signal: u8,
+    pub theme: Option<::flatbuffers::WIPOffset<Theme<'a>>>,
 }
 impl<'a> Default for ShellStateArgs<'a> {
   #[inline]
@@ -270,6 +411,7 @@ impl<'a> Default for ShellStateArgs<'a> {
       audio_muted: false,
       network_name: None,
       toggle_cc_signal: 0,
+      theme: None,
     }
   }
 }
@@ -308,6 +450,10 @@ impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ShellStateBuilder<'a, 'b, A> 
     self.fbb_.push_slot::<u8>(ShellState::VT_TOGGLE_CC_SIGNAL, toggle_cc_signal, 0);
   }
   #[inline]
+  pub fn add_theme(&mut self, theme: ::flatbuffers::WIPOffset<Theme<'b >>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<Theme>>(ShellState::VT_THEME, theme);
+  }
+  #[inline]
   pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ShellStateBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     ShellStateBuilder {
@@ -332,6 +478,7 @@ impl ::core::fmt::Debug for ShellState<'_> {
       ds.field("audio_muted", &self.audio_muted());
       ds.field("network_name", &self.network_name());
       ds.field("toggle_cc_signal", &self.toggle_cc_signal());
+      ds.field("theme", &self.theme());
       ds.finish()
   }
 }

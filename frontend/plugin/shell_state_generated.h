@@ -15,11 +15,94 @@ static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
 
 namespace NiriShell {
 
+struct Theme;
+struct ThemeBuilder;
+
 struct Workspace;
 struct WorkspaceBuilder;
 
 struct ShellState;
 struct ShellStateBuilder;
+
+struct Theme FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef ThemeBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_BG_COLOR = 4,
+    VT_FG_COLOR = 6,
+    VT_ACCENT_COLOR = 8
+  };
+  const ::flatbuffers::String *bg_color() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_BG_COLOR);
+  }
+  const ::flatbuffers::String *fg_color() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_FG_COLOR);
+  }
+  const ::flatbuffers::String *accent_color() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_ACCENT_COLOR);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_BG_COLOR) &&
+           verifier.VerifyString(bg_color()) &&
+           VerifyOffset(verifier, VT_FG_COLOR) &&
+           verifier.VerifyString(fg_color()) &&
+           VerifyOffset(verifier, VT_ACCENT_COLOR) &&
+           verifier.VerifyString(accent_color()) &&
+           verifier.EndTable();
+  }
+};
+
+struct ThemeBuilder {
+  typedef Theme Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_bg_color(::flatbuffers::Offset<::flatbuffers::String> bg_color) {
+    fbb_.AddOffset(Theme::VT_BG_COLOR, bg_color);
+  }
+  void add_fg_color(::flatbuffers::Offset<::flatbuffers::String> fg_color) {
+    fbb_.AddOffset(Theme::VT_FG_COLOR, fg_color);
+  }
+  void add_accent_color(::flatbuffers::Offset<::flatbuffers::String> accent_color) {
+    fbb_.AddOffset(Theme::VT_ACCENT_COLOR, accent_color);
+  }
+  explicit ThemeBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<Theme> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<Theme>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<Theme> CreateTheme(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> bg_color = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> fg_color = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> accent_color = 0) {
+  ThemeBuilder builder_(_fbb);
+  builder_.add_accent_color(accent_color);
+  builder_.add_fg_color(fg_color);
+  builder_.add_bg_color(bg_color);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<Theme> CreateThemeDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *bg_color = nullptr,
+    const char *fg_color = nullptr,
+    const char *accent_color = nullptr) {
+  auto bg_color__ = bg_color ? _fbb.CreateString(bg_color) : 0;
+  auto fg_color__ = fg_color ? _fbb.CreateString(fg_color) : 0;
+  auto accent_color__ = accent_color ? _fbb.CreateString(accent_color) : 0;
+  return NiriShell::CreateTheme(
+      _fbb,
+      bg_color__,
+      fg_color__,
+      accent_color__);
+}
 
 struct Workspace FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef WorkspaceBuilder Builder;
@@ -106,7 +189,8 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_AUDIO_VOLUME = 10,
     VT_AUDIO_MUTED = 12,
     VT_NETWORK_NAME = 14,
-    VT_TOGGLE_CC_SIGNAL = 16
+    VT_TOGGLE_CC_SIGNAL = 16,
+    VT_THEME = 18
   };
   const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *>(VT_WORKSPACES);
@@ -129,6 +213,9 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   uint8_t toggle_cc_signal() const {
     return GetField<uint8_t>(VT_TOGGLE_CC_SIGNAL, 0);
   }
+  const NiriShell::Theme *theme() const {
+    return GetPointer<const NiriShell::Theme *>(VT_THEME);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -143,6 +230,8 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyOffset(verifier, VT_NETWORK_NAME) &&
            verifier.VerifyString(network_name()) &&
            VerifyField<uint8_t>(verifier, VT_TOGGLE_CC_SIGNAL, 1) &&
+           VerifyOffset(verifier, VT_THEME) &&
+           verifier.VerifyTable(theme()) &&
            verifier.EndTable();
   }
 };
@@ -172,6 +261,9 @@ struct ShellStateBuilder {
   void add_toggle_cc_signal(uint8_t toggle_cc_signal) {
     fbb_.AddElement<uint8_t>(ShellState::VT_TOGGLE_CC_SIGNAL, toggle_cc_signal, 0);
   }
+  void add_theme(::flatbuffers::Offset<NiriShell::Theme> theme) {
+    fbb_.AddOffset(ShellState::VT_THEME, theme);
+  }
   explicit ShellStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -191,8 +283,10 @@ inline ::flatbuffers::Offset<ShellState> CreateShellState(
     int8_t audio_volume = 0,
     bool audio_muted = false,
     ::flatbuffers::Offset<::flatbuffers::String> network_name = 0,
-    uint8_t toggle_cc_signal = 0) {
+    uint8_t toggle_cc_signal = 0,
+    ::flatbuffers::Offset<NiriShell::Theme> theme = 0) {
   ShellStateBuilder builder_(_fbb);
+  builder_.add_theme(theme);
   builder_.add_network_name(network_name);
   builder_.add_active_window_title(active_window_title);
   builder_.add_workspaces(workspaces);
@@ -211,7 +305,8 @@ inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
     int8_t audio_volume = 0,
     bool audio_muted = false,
     const char *network_name = nullptr,
-    uint8_t toggle_cc_signal = 0) {
+    uint8_t toggle_cc_signal = 0,
+    ::flatbuffers::Offset<NiriShell::Theme> theme = 0) {
   auto workspaces__ = workspaces ? _fbb.CreateVector<::flatbuffers::Offset<NiriShell::Workspace>>(*workspaces) : 0;
   auto active_window_title__ = active_window_title ? _fbb.CreateString(active_window_title) : 0;
   auto network_name__ = network_name ? _fbb.CreateString(network_name) : 0;
@@ -223,7 +318,8 @@ inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
       audio_volume,
       audio_muted,
       network_name__,
-      toggle_cc_signal);
+      toggle_cc_signal,
+      theme);
 }
 
 inline const NiriShell::ShellState *GetShellState(const void *buf) {
