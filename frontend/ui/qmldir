@@ -1,1 +1,5 @@
 singleton Theme 1.0 Theme.qml
+
+SystemTray 1.0 SystemTray.qml
+WorkspacesNav 1.0 WorkspacesNav.qml
+ControlCenterMenu 1.0 ControlCenterMenu.qml

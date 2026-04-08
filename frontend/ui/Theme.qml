@@ -2,7 +2,7 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-    // --- FARBEN (Standard: Catppuccin Macchiato) ---
+    // --- FARBEN (Standard/Fallback Werte) ---
     property color bg: "#1e1e2e"
     property color bgHover: "#313244"
     property color text: "#cdd6f4"
@@ -19,5 +19,13 @@ QtObject {
     property int margin: 16
     
     // --- ANIMATIONEN ---
-    property int animDuration: 150 
+    property int animDuration: 300 // Etwas langsamer gemacht für den "Wow"-Effekt beim Wechsel
+    
+    // ==========================================
+    // NEU: Fließende Übergänge (Die Vision!)
+    // ==========================================
+    // Sobald sich diese Werte ändern, animiert QML die Farbe automatisch
+    Behavior on bg { ColorAnimation { duration: animDuration } }
+    Behavior on text { ColorAnimation { duration: animDuration } }
+    Behavior on primary { ColorAnimation { duration: animDuration } }
 }
