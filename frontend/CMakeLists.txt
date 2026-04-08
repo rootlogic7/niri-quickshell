@@ -1,18 +1,32 @@
 cmake_minimum_required(VERSION 3.16)
-project(NiriQuickshellPlugin LANGUAGES CXX)
+project(NiriQuickshell LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-# Fix für Warnung 1: Qt6 Policy QTP0001 aktivieren (Standard seit Qt 6.5+)
-if(POLICY QTP0001)
-    cmake_policy(SET QTP0001 NEW)
+# 1. Corrosion laden (Lädt das Tool herunter)
+find_package(Corrosion QUIET)
+if(NOT Corrosion_FOUND)
+    message(STATUS "Corrosion nicht im System gefunden. Lade via FetchContent herunter...")
+    include(FetchContent)
+    FetchContent_Declare(
+        Corrosion
+        GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+        GIT_TAG v0.5.0
+    )
+    FetchContent_MakeAvailable(Corrosion)
 endif()
 
+# 2. Rust-Projekt importieren
+corrosion_import_crate(MANIFEST_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../backend/Cargo.toml")
+
+# 3. Qt-Frontend konfigurieren
 find_package(Qt6 REQUIRED COMPONENTS Core Network Qml Quick)
 
-# Fix für Warnung 2: Wir fügen OUTPUT_DIRECTORY hinzu, um die Pfad-Warnung zu beheben
+# FIX: Die Qt-Policy wird mit 'qt_policy' NACH find_package gesetzt!
+qt_policy(SET QTP0001 NEW)
+
 qt6_add_qml_module(NiriStatePlugin
     URI NiriState
     VERSION 1.0
@@ -24,7 +38,6 @@ qt6_add_qml_module(NiriStatePlugin
         plugin/ShellStateStore.h
 )
 
-# DER FIX FÜR DEN ERROR: Wir sagen dem Compiler explizit, wo unsere Header liegen!
 target_include_directories(NiriStatePlugin PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin
 )
@@ -35,3 +48,21 @@ target_link_libraries(NiriStatePlugin PRIVATE
     Qt6::Qml
     Qt6::Quick
 )
+
+# 4. Installation
+# 4.1. Das Rust-Backend installieren (/usr/bin/)
+install(PROGRAMS $<TARGET_FILE:niri-quickshell-backend> 
+        DESTINATION bin)
+
+# 4.2. Das C++ QML-Plugin installieren (/usr/lib/niri-quickshell/NiriState/)
+# Das OUTPUT_DIRECTORY in Zeile 30 generiert einen Ordner "NiriState".
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/NiriState 
+        DESTINATION lib/niri-quickshell)
+
+# 4.3. Die QML UI-Dateien installieren (/usr/share/niri-quickshell/ui/)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ui 
+        DESTINATION share/niri-quickshell)
+
+# 4.4. Unser neues Wrapper-Skript installieren (/usr/bin/)
+install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/../bin/niri-quickshell 
+        DESTINATION bin)

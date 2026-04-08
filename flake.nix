@@ -12,13 +12,58 @@
       pkgs = nixpkgs.legacyPackages.${system};
     in
     {
+      # =========================================================
+      # DAS ECHTE SYSTEM-PAKET FÜR NIXOS
+      # =========================================================
+      packages.${system}.default = pkgs.stdenv.mkDerivation {
+        pname = "niri-quickshell";
+        version = "0.1.0";
+
+        # Nimm das komplette aktuelle Git-Verzeichnis als Quelle
+        src = ./.;
+
+        # Sag CMake, dass die Haupt-Konfiguration im Ordner 'frontend' liegt
+        cmakeFlags = [ "-S" "frontend" ];
+
+        cargoRoot = "backend";
+
+        # RUST OFFLINE-ZUGRIFF: Nix liest die Lock-Datei und lädt alle Crates vorab!
+        cargoDeps = pkgs.rustPlatform.importCargoLock {
+          lockFile = ./backend/Cargo.lock;
+        };
+
+        nativeBuildInputs = with pkgs; [
+          pkg-config
+          cmake
+          ninja
+          flatbuffers
+          corrosion                   # Nix bringt Corrosion direkt mit!
+          rustPlatform.cargoSetupHook # Sagt CMake, wo die Offline-Crates liegen
+          cargo
+          rustc
+          qt6.wrapQtAppsHook          # MAGIE: Setzt automatisch alle QT_WAYLAND Pfade für das Backend/Skript
+        ];
+
+        buildInputs = with pkgs; [
+          qt6.qtbase
+          qt6.qtdeclarative
+          qt6.qtwayland
+          wayland
+          quickshell
+        ];
+      };
+
+      # =========================================================
+      # DEINE ENTWICKLUNGSUMGEBUNG (Bleibt wie sie ist)
+      # =========================================================
       devShells.${system}.default = pkgs.mkShell {
         # Build-Tools und Compiler
         nativeBuildInputs = with pkgs; [
           pkg-config
           cmake
           ninja
-          flatbuffers # Bringt den 'flatc' Compiler mit
+          flatbuffers
+          git
           
           # Rust Toolchain
           cargo

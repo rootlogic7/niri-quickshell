@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# 1. Finde heraus, wo das Programm installiert wurde (Prefix)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+PREFIX="$(dirname "$SCRIPT_DIR")"
+
+# 2. Setze die Pfade für das QML-Plugin und den UI-Ordner dynamisch
+export QML2_IMPORT_PATH="$PREFIX/lib/niri-quickshell:$QML2_IMPORT_PATH"
+UI_DIR="$PREFIX/share/niri-quickshell/ui" # FIX: Hier den Ordner, nicht die Datei!
+
+# 3. Starte das Rust-Backend im Hintergrund (FIX: Mit absolutem Pfad!)
+"$PREFIX/bin/niri-quickshell-backend" &
+BACKEND_PID=$!
+
+# 4. Cleanup-Falle: Wenn Quickshell beendet wird, kille das Backend
+trap "kill $BACKEND_PID 2>/dev/null" EXIT
+
+# 5. Starte das Frontend
+echo "Starte Niri-Quickshell (Backend PID: $BACKEND_PID)..."
+quickshell -c "$UI_DIR"

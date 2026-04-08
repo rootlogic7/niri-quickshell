@@ -1,13 +1,17 @@
 [package]
-name = "backend"
+name = "niri-quickshell-backend"
 version = "0.1.0"
 edition = "2024"
+
+[[bin]]
+name = "niri-quickshell-backend"
+path = "src/main.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-flatbuffers = "25.12.19" # Kompatibel mit der flatc-Version aus Nixpkgs
+flatbuffers = "25.12.19"
 zbus = "5.0"
 futures-lite = "2.6"
 libc = "0.2.184"
