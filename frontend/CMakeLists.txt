@@ -55,12 +55,17 @@ install(PROGRAMS $<TARGET_FILE:niri-quickshell-backend>
         DESTINATION bin)
 
 # 4.2. Das C++ QML-Plugin installieren
-# Zuerst kopieren wir den generierten QML-Wrapper-Ordner...
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/NiriState 
-        DESTINATION lib/niri-quickshell)
+# MAGIE: Wir sagen dem Wrapper, dass er im gleichen Ordner ($ORIGIN) nach der Basis-Lib suchen soll!
+set_target_properties(NiriStatePluginplugin PROPERTIES INSTALL_RPATH "$ORIGIN")
 
-# ... und dann legen wir unsere eigentliche C++ Bibliothek genau daneben!
-install(TARGETS NiriStatePlugin 
+# Wir lassen CMake beide Bibliotheken sauber installieren (CMake repariert dabei die Pfade!)
+install(TARGETS NiriStatePlugin NiriStatePluginplugin 
+        DESTINATION lib/niri-quickshell/NiriState)
+
+# Und wir kopieren die generierten QML-Textdateien hinterher
+install(FILES 
+        ${CMAKE_CURRENT_BINARY_DIR}/NiriState/qmldir 
+        ${CMAKE_CURRENT_BINARY_DIR}/NiriState/NiriStatePlugin.qmltypes 
         DESTINATION lib/niri-quickshell/NiriState)
 
 # 4.3. Die QML UI-Dateien installieren (/usr/share/niri-quickshell/ui/)
