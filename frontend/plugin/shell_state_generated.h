@@ -190,7 +190,8 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_AUDIO_MUTED = 12,
     VT_NETWORK_NAME = 14,
     VT_TOGGLE_CC_SIGNAL = 16,
-    VT_THEME = 18
+    VT_THEME = 18,
+    VT_AVAILABLE_THEMES = 20
   };
   const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *workspaces() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<NiriShell::Workspace>> *>(VT_WORKSPACES);
@@ -216,6 +217,9 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const NiriShell::Theme *theme() const {
     return GetPointer<const NiriShell::Theme *>(VT_THEME);
   }
+  const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *available_themes() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>> *>(VT_AVAILABLE_THEMES);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -232,6 +236,9 @@ struct ShellState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint8_t>(verifier, VT_TOGGLE_CC_SIGNAL, 1) &&
            VerifyOffset(verifier, VT_THEME) &&
            verifier.VerifyTable(theme()) &&
+           VerifyOffset(verifier, VT_AVAILABLE_THEMES) &&
+           verifier.VerifyVector(available_themes()) &&
+           verifier.VerifyVectorOfStrings(available_themes()) &&
            verifier.EndTable();
   }
 };
@@ -264,6 +271,9 @@ struct ShellStateBuilder {
   void add_theme(::flatbuffers::Offset<NiriShell::Theme> theme) {
     fbb_.AddOffset(ShellState::VT_THEME, theme);
   }
+  void add_available_themes(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> available_themes) {
+    fbb_.AddOffset(ShellState::VT_AVAILABLE_THEMES, available_themes);
+  }
   explicit ShellStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -284,8 +294,10 @@ inline ::flatbuffers::Offset<ShellState> CreateShellState(
     bool audio_muted = false,
     ::flatbuffers::Offset<::flatbuffers::String> network_name = 0,
     uint8_t toggle_cc_signal = 0,
-    ::flatbuffers::Offset<NiriShell::Theme> theme = 0) {
+    ::flatbuffers::Offset<NiriShell::Theme> theme = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<::flatbuffers::String>>> available_themes = 0) {
   ShellStateBuilder builder_(_fbb);
+  builder_.add_available_themes(available_themes);
   builder_.add_theme(theme);
   builder_.add_network_name(network_name);
   builder_.add_active_window_title(active_window_title);
@@ -306,10 +318,12 @@ inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
     bool audio_muted = false,
     const char *network_name = nullptr,
     uint8_t toggle_cc_signal = 0,
-    ::flatbuffers::Offset<NiriShell::Theme> theme = 0) {
+    ::flatbuffers::Offset<NiriShell::Theme> theme = 0,
+    const std::vector<::flatbuffers::Offset<::flatbuffers::String>> *available_themes = nullptr) {
   auto workspaces__ = workspaces ? _fbb.CreateVector<::flatbuffers::Offset<NiriShell::Workspace>>(*workspaces) : 0;
   auto active_window_title__ = active_window_title ? _fbb.CreateString(active_window_title) : 0;
   auto network_name__ = network_name ? _fbb.CreateString(network_name) : 0;
+  auto available_themes__ = available_themes ? _fbb.CreateVector<::flatbuffers::Offset<::flatbuffers::String>>(*available_themes) : 0;
   return NiriShell::CreateShellState(
       _fbb,
       workspaces__,
@@ -319,7 +333,8 @@ inline ::flatbuffers::Offset<ShellState> CreateShellStateDirect(
       audio_muted,
       network_name__,
       toggle_cc_signal,
-      theme);
+      theme,
+      available_themes__);
 }
 
 inline const NiriShell::ShellState *GetShellState(const void *buf) {

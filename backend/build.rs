@@ -8,9 +8,15 @@ fn main() {
 
     // Rufe flatc auf
     let status = Command::new("flatc")
-        .args(["--rust", "-o", "src/", proto_file])
+        .args(&[
+            "--rust",
+            "-o",
+            "src/",
+            "../protocol/shell_state.fbs",
+            "../protocol/client_command.fbs", // NEU hinzugefügt!
+        ])
         .status()
-        .expect("Konnte flatc nicht ausführen. Ist es installiert?");
+        .expect("Fehler beim Ausführen von flatc");
 
     if !status.success() {
         panic!("flatc ist fehlgeschlagen!");

@@ -18,6 +18,7 @@ class ShellStateStore : public QObject {
     Q_PROPERTY(QString themeBackground READ themeBackground NOTIFY themeChanged)
     Q_PROPERTY(QString themeForeground READ themeForeground NOTIFY themeChanged)
     Q_PROPERTY(QString themeAccent READ themeAccent NOTIFY themeChanged)
+    Q_PROPERTY(QStringList availableThemes READ availableThemes NOTIFY availableThemesChanged)
 
 public:
     explicit ShellStateStore(QObject *parent = nullptr);
@@ -37,6 +38,8 @@ public:
     QString themeBackground() const { return m_themeBackground; }
     QString themeForeground() const { return m_themeForeground; }
     QString themeAccent() const { return m_themeAccent; }
+    QStringList availableThemes() const { return m_availableThemes; }
+    Q_INVOKABLE void setTheme(const QString &themeName);
 
 signals:
     void workspacesChanged();
@@ -47,6 +50,7 @@ signals:
     void networkNameChanged();
     void toggleCcSignalChanged();
     void themeChanged();
+    void availableThemesChanged();
 
 private slots:
     void processPacket(const QByteArray &packet);
@@ -62,7 +66,8 @@ private:
     QString m_networkName = "Offline";
     int m_toggleCcSignal = 0;
 
-    QString m_themeBackground = "#000000"; 
+    QString m_themeBackground = "#000000";
     QString m_themeForeground = "#ffffff";
     QString m_themeAccent = "#ffffff";
+    QStringList m_availableThemes;
 };

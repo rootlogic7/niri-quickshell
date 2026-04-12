@@ -33,6 +33,7 @@ PanelWindow {
         id: controlCenter
         backend: niriReader
         mainWindow: root
+        onVisibleChanged: if(!visible) mode = "main"
     }
 
     // Die eigentliche Statusleiste

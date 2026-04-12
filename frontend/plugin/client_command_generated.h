@@ -22,7 +22,8 @@ struct ClientCommand FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef ClientCommandBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ACTION = 4,
-    VT_ARG_INT = 6
+    VT_ARG_INT = 6,
+    VT_ARG_STRING = 8
   };
   const ::flatbuffers::String *action() const {
     return GetPointer<const ::flatbuffers::String *>(VT_ACTION);
@@ -30,12 +31,17 @@ struct ClientCommand FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   int32_t arg_int() const {
     return GetField<int32_t>(VT_ARG_INT, 0);
   }
+  const ::flatbuffers::String *arg_string() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_ARG_STRING);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_ACTION) &&
            verifier.VerifyString(action()) &&
            VerifyField<int32_t>(verifier, VT_ARG_INT, 4) &&
+           VerifyOffset(verifier, VT_ARG_STRING) &&
+           verifier.VerifyString(arg_string()) &&
            verifier.EndTable();
   }
 };
@@ -49,6 +55,9 @@ struct ClientCommandBuilder {
   }
   void add_arg_int(int32_t arg_int) {
     fbb_.AddElement<int32_t>(ClientCommand::VT_ARG_INT, arg_int, 0);
+  }
+  void add_arg_string(::flatbuffers::Offset<::flatbuffers::String> arg_string) {
+    fbb_.AddOffset(ClientCommand::VT_ARG_STRING, arg_string);
   }
   explicit ClientCommandBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -64,8 +73,10 @@ struct ClientCommandBuilder {
 inline ::flatbuffers::Offset<ClientCommand> CreateClientCommand(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     ::flatbuffers::Offset<::flatbuffers::String> action = 0,
-    int32_t arg_int = 0) {
+    int32_t arg_int = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> arg_string = 0) {
   ClientCommandBuilder builder_(_fbb);
+  builder_.add_arg_string(arg_string);
   builder_.add_arg_int(arg_int);
   builder_.add_action(action);
   return builder_.Finish();
@@ -74,12 +85,15 @@ inline ::flatbuffers::Offset<ClientCommand> CreateClientCommand(
 inline ::flatbuffers::Offset<ClientCommand> CreateClientCommandDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *action = nullptr,
-    int32_t arg_int = 0) {
+    int32_t arg_int = 0,
+    const char *arg_string = nullptr) {
   auto action__ = action ? _fbb.CreateString(action) : 0;
+  auto arg_string__ = arg_string ? _fbb.CreateString(arg_string) : 0;
   return NiriShell::CreateClientCommand(
       _fbb,
       action__,
-      arg_int);
+      arg_int,
+      arg_string__);
 }
 
 inline const NiriShell::ClientCommand *GetClientCommand(const void *buf) {

@@ -30,13 +30,16 @@ qt_policy(SET QTP0001 NEW)
 # ==========================================
 # AUTOMATISCHE FLATBUFFER GENERIERUNG
 # ==========================================
-set(FBS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../protocol/shell_state.fbs")
+set(FBS_FILE_SHELL "${CMAKE_CURRENT_SOURCE_DIR}/../protocol/shell_state.fbs")
+set(FBS_FILE_CMD "${CMAKE_CURRENT_SOURCE_DIR}/../protocol/client_command.fbs") # NEU
 set(FBS_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/plugin")
 
 add_custom_command(
-    OUTPUT ${FBS_OUT_DIR}/shell_state_generated.h
-    COMMAND flatc --cpp -o ${FBS_OUT_DIR}/ ${FBS_FILE}
-    DEPENDS ${FBS_FILE}
+    # NEU: Beide Header-Dateien als Output definieren
+    OUTPUT ${FBS_OUT_DIR}/shell_state_generated.h ${FBS_OUT_DIR}/client_command_generated.h
+    # NEU: Beide .fbs-Dateien an flatc übergeben
+    COMMAND flatc --cpp -o ${FBS_OUT_DIR}/ ${FBS_FILE_SHELL} ${FBS_FILE_CMD}
+    DEPENDS ${FBS_FILE_SHELL} ${FBS_FILE_CMD}
     COMMENT "Generiere C++ FlatBuffer Header..."
 )
 
@@ -50,9 +53,10 @@ qt6_add_qml_module(NiriStatePlugin
         plugin/ShellStateStore.cpp
         plugin/ShellStateStore.h
         plugin/shell_state_generated.h
+        plugin/client_command_generated.h
 )
 
-target_include_directories(NiriStatePlugin PRIVATE 
+target_include_directories(NiriStatePlugin PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin
 )
 
@@ -65,7 +69,7 @@ target_link_libraries(NiriStatePlugin PRIVATE
 
 # 4. Installation
 # 4.1. Das Rust-Backend installieren (/usr/bin/)
-install(PROGRAMS $<TARGET_FILE:niri-quickshell-backend> 
+install(PROGRAMS $<TARGET_FILE:niri-quickshell-backend>
         DESTINATION bin)
 
 # 4.2. Das C++ QML-Plugin installieren
@@ -73,19 +77,19 @@ install(PROGRAMS $<TARGET_FILE:niri-quickshell-backend>
 set_target_properties(NiriStatePluginplugin PROPERTIES INSTALL_RPATH "$ORIGIN")
 
 # Wir lassen CMake beide Bibliotheken sauber installieren (CMake repariert dabei die Pfade!)
-install(TARGETS NiriStatePlugin NiriStatePluginplugin 
+install(TARGETS NiriStatePlugin NiriStatePluginplugin
         DESTINATION lib/niri-quickshell/NiriState)
 
 # Und wir kopieren die generierten QML-Textdateien hinterher
-install(FILES 
-        ${CMAKE_CURRENT_BINARY_DIR}/NiriState/qmldir 
-        ${CMAKE_CURRENT_BINARY_DIR}/NiriState/NiriStatePlugin.qmltypes 
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/NiriState/qmldir
+        ${CMAKE_CURRENT_BINARY_DIR}/NiriState/NiriStatePlugin.qmltypes
         DESTINATION lib/niri-quickshell/NiriState)
 
 # 4.3. Die QML UI-Dateien installieren (/usr/share/niri-quickshell/ui/)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ui 
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ui
         DESTINATION share/niri-quickshell)
 
 # 4.4. Unser neues Wrapper-Skript installieren (/usr/bin/)
-install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/../bin/niri-quickshell 
+install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/../bin/niri-quickshell
         DESTINATION bin)

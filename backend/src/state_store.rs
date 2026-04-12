@@ -46,7 +46,6 @@ where
     // ==========================================
     // LIVE-THEME LADEN
     // ==========================================
-    // Wir holen uns das frisch geladene Theme aus dem Arbeitsspeicher
     let current_theme = crate::modules::theme::get_theme();
 
     let bg_color = builder.create_string(&current_theme.bg_color);
@@ -58,7 +57,17 @@ where
         fg_color: Some(fg_color),
         accent_color: Some(accent_color),
     });
+
     // ==========================================
+    // 2. NEU: Verfügbare Themes sammeln
+    // ==========================================
+    let available_themes_list = crate::modules::theme::get_available_themes();
+    
+    let mut theme_name_offsets = Vec::new();
+    for name in available_themes_list {
+        theme_name_offsets.push(builder.create_string(&name));
+    }
+    let available_themes_vec = builder.create_vector(&theme_name_offsets);
 
     // -- Finales ShellState Objekt bauen --
     let shell_state = ShellState::create(&mut builder, &ShellStateArgs {
@@ -69,9 +78,8 @@ where
         audio_muted: muted,
         network_name: Some(net_name_fb),
         toggle_cc_signal: cc_counter,
-        
-        // NEU: Das Theme in den Haupt-State einhängen
         theme: Some(theme_offset),
+        available_themes: Some(available_themes_vec),
     });
 
     builder.finish_size_prefixed(shell_state, None);

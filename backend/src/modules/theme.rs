@@ -11,6 +11,23 @@ pub struct ThemeConfig {
     pub bg_color: String,
     pub fg_color: String,
     pub accent_color: String,
+
+    pub color0: Option<String>,
+    pub color1: Option<String>,
+    pub color2: Option<String>,
+    pub color3: Option<String>,
+    pub color4: Option<String>,
+    pub color5: Option<String>,
+    pub color6: Option<String>,
+    pub color7: Option<String>,
+    pub color8: Option<String>,
+    pub color9: Option<String>,
+    pub color10: Option<String>,
+    pub color11: Option<String>,
+    pub color12: Option<String>,
+    pub color13: Option<String>,
+    pub color14: Option<String>,
+    pub color15: Option<String>,
 }
 
 // Unser Fallback, falls die Datei noch nicht existiert (Catppuccin Macchiato)
@@ -20,6 +37,11 @@ impl Default for ThemeConfig {
             bg_color: "#24273a".to_string(), 
             fg_color: "#cad3f5".to_string(),
             accent_color: "#8aadf4".to_string(),
+
+            color0: None, color1: None, color2: None, color3: None,
+            color4: None, color5: None, color6: None, color7: None,
+            color8: None, color9: None, color10: None, color11: None,
+            color12: None, color13: None, color14: None, color15: None,
         }
     }
 }
@@ -81,11 +103,59 @@ fn load_theme_from_disk() {
         if let Ok(new_theme) = toml::from_str::<ThemeConfig>(&content) {
             if let Some(lock) = CURRENT_THEME.get() {
                 if let Ok(mut theme) = lock.write() {
-                    *theme = new_theme;
+                    *theme = new_theme.clone();
                 }
             }
+            
+            // NEU: Die Exporter sofort nach dem Laden triggern!
+            crate::modules::exporter::export_fuzzel(&new_theme);
+            crate::modules::exporter::export_ghostty(&new_theme);
+            // NEU: Ghostty per Signal zwingen, die externe Datei sofort neu zu laden!
+            let _ = std::process::Command::new("pkill")
+                .args(&["-USR2", "ghostty"])
+                .spawn();
+                
+            // NEU: Den Niri-Rahmen exportieren
+            crate::modules::exporter::export_niri(&new_theme);
+            
         } else {
             println!("⚠️ Fehler beim Parsen der theme.toml. Syntax prüfen!");
         }
     }
+}
+
+// NEU: Scanner für verfügbare Themes
+pub fn get_available_themes() -> Vec<String> {
+    let mut themes = Vec::new();
+    
+    // Baue den Pfad zu ~/.config/niri-quickshell/themes
+    let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("~/.config"));
+    path.push("niri-quickshell/themes");
+
+    // Falls der Ordner noch nicht existiert, erstellen wir ihn stillschweigend
+    if !path.exists() {
+        let _ = fs::create_dir_all(&path);
+    }
+
+    // Lese alle Dateien im Ordner aus
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_file() {
+                    let file_name = entry.file_name();
+                    let name_str = file_name.to_string_lossy();
+                    
+                    // Nur .toml Dateien akzeptieren
+                    if name_str.ends_with(".toml") {
+                        // ".toml" abschneiden und zur Liste hinzufügen
+                        themes.push(name_str.replace(".toml", ""));
+                    }
+                }
+            }
+        }
+    }
+    
+    // Alphabetisch sortieren, damit das UI später aufgeräumt aussieht
+    themes.sort();
+    themes
 }

@@ -11,15 +11,16 @@ QtObject {
     property color success: "#a6e3a1"
     property color error: "#f38ba8"
 
-    // --- TYPOGRAFIE & ABMESSUNGEN ---
-    property int fontSize: 14
-    property int iconSize: 16
+    // --- ABMESSUNGEN ---
     property int barHeight: 40
+    property int menuWidth: 320
     property int radius: 6
     property int margin: 16
+    property int fontSize: 14
+    property int iconSize: 16
     
     // --- ANIMATIONEN ---
-    property int animDuration: 300 // Etwas langsamer gemacht für den "Wow"-Effekt beim Wechsel
+    property int animDuration: 300
     
     // ==========================================
     // NEU: Fließende Übergänge (Die Vision!)

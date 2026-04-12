@@ -111,6 +111,28 @@ void ShellStateStore::processPacket(const QByteArray &packet) {
         }
     }
     // ==========================================
+    // ==========================================
+    // NEU: Verfügbare Themes auspacken
+    // ==========================================
+    auto available_themes_fb = shellState->available_themes();
+    if (available_themes_fb) {
+        QStringList newThemes;
+        // Wir iterieren über den FlatBuffer-Vektor
+        for (uint32_t i = 0; i < available_themes_fb->size(); i++) {
+            auto themeName = available_themes_fb->Get(i);
+            if (themeName) {
+                newThemes.append(QString::fromStdString(themeName->str()));
+            }
+        }
+        
+        // Nur das UI benachrichtigen, wenn sich die Liste wirklich geändert hat
+        // (z.B. weil der User eine neue .toml Datei im Ordner erstellt hat)
+        if (m_availableThemes != newThemes) {
+            m_availableThemes = newThemes;
+            emit availableThemesChanged();
+        }
+    }
+    // ==========================================
 }
 
 void ShellStateStore::focusWorkspace(int id) {
@@ -139,6 +161,22 @@ void ShellStateStore::toggleAudioMute() {
     auto cmd = NiriShell::CreateClientCommand(builder, action, 0);
     builder.Finish(cmd);
 
+    QByteArray data(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+    m_ipcClient->sendCommand(data);
+}
+
+void ShellStateStore::setTheme(const QString &themeName) {
+    flatbuffers::FlatBufferBuilder builder;
+    
+    // 1. Strings im Speicher anlegen
+    auto action = builder.CreateString("set_theme");
+    auto arg_str = builder.CreateString(themeName.toStdString());
+
+    // 2. Das ClientCommand Objekt bauen (0 ist der Platzhalter für arg_int)
+    auto cmd = NiriShell::CreateClientCommand(builder, action, 0, arg_str);
+    builder.Finish(cmd);
+
+    // 3. Über den Socket abfeuern
     QByteArray data(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
     m_ipcClient->sendCommand(data);
 }

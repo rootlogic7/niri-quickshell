@@ -5,6 +5,7 @@ namespace NiriShell;
 table ClientCommand {
   action: string;      // z.B. "focus_workspace"
   arg_int: int32;      // Die ID des Workspaces
+  arg_string: string;
 }
 
 root_type ClientCommand;
