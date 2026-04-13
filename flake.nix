@@ -80,6 +80,14 @@
           quickshell
         ];
 
+        # =========================================================
+        # FIX: Hardcode den Pfad zur Quickshell im Bash-Skript
+        # =========================================================
+        postInstall = ''
+          substituteInPlace $out/bin/niri-quickshell \
+            --replace 'quickshell -c' '${pkgs.quickshell}/bin/quickshell -c'
+        '';
+
         # Umgebungsvariablen, damit Qt und pkg-config sich in der devShell finden
         QT_QPA_PLATFORM = "wayland";
         PKG_CONFIG_PATH = "${pkgs.qt6.qtbase.dev}/lib/pkgconfig";
