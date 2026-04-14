@@ -41,6 +41,7 @@
           cargo
           rustc
           qt6.wrapQtAppsHook          # MAGIE: Setzt automatisch alle QT_WAYLAND Pfade für das Backend/Skript
+          makeWrapper
         ];
 
         buildInputs = with pkgs; [
@@ -50,6 +51,15 @@
           wayland
           quickshell
         ];
+
+        # =========================================================
+        # FIX: Das Skript einwickeln (wrappermagic!)
+        # =========================================================
+        postFixup = ''
+          # wrapProgram packt das Skript in eine Hülle und fügt Quickshell zum $PATH hinzu
+          wrapProgram $out/bin/niri-quickshell \
+            --prefix PATH : ${pkgs.quickshell}/bin
+        '';
       };
 
       # =========================================================
