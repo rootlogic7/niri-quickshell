@@ -1,0 +1,22 @@
+bg_color = "#1e1318"
+fg_color = "#fce4ec"
+accent_color = "#f48fb1"
+
+# 16 Terminal Colors
+color0 = "#2d1f25"
+color1 = "#e91e63"
+color2 = "#9ccc65"
+color3 = "#ffca28"
+color4 = "#29b6f6"
+color5 = "#ab47bc"
+color6 = "#26c6da"
+color7 = "#f8bbd0"
+
+color8 = "#5c4350"
+color9 = "#f06292"
+color10 = "#c5e1a5"
+color11 = "#ffe082"
+color12 = "#81d4fa"
+color13 = "#ce93d8"
+color14 = "#80deea"
+color15 = "#fce4ec"
